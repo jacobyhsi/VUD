@@ -1,0 +1,1 @@
+{"num_features_per_mode": [50, 50, 100], "mode_means": [-7.0, -1.0, 5.0], "mode_stds": [0.75, 0.75, 1.0], "mode_biases": [1.0, 1.0, -0.5], "mode_coeffs": [0.75, 0.75, 0], "noise_stds": [0.1, 0.1, 2], "seed": 2, "round_dp": 1, "feature_columns": ["x"], "label": "y", "map": {}}

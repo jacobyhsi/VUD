@@ -1,0 +1,1 @@
+{"dataset_size": 100, "feature_dimensions": 1, "feature_means": [1.0], "feature_stds": [2.0], "coefficients": [-1], "noise_std": 2, "bias": 3.0, "round_dp": 1, "seed": 0, "feature_columns": ["x1"], "label": "y", "map": {}}

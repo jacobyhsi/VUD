@@ -1,0 +1,1 @@
+{"bias": -0.5, "coefficients": [0.25], "feature_means": [1.5], "feature_stds": [3.0], "dataset_size": 500, "column_names": ["x1", "y"], "label": "y", "map": {"0": 0, "1": 1}}

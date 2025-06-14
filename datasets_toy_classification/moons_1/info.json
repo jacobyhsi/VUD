@@ -1,0 +1,1 @@
+{"dataset_size": 100, "noise": 0.1, "seed": 0, "feature_columns": ["x1", "x2"], "label": "y", "map": {"0": 0, "1": 1}}
