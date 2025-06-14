@@ -1,4 +1,4 @@
-# Variational Uncertainty Decomposition for In-Context Learning
+# Clever Queries Clarify Beliefs: Variational Uncertainty Decomposition for In-Context Learning
 > by [I. Shavindra Jayasekera](http://yingzhenli.net/home/en/?page_id=1411)\* [Jacob Si](https://jacobyhsi.github.io/)\*, [Filippo Valdettaro](https://faisallab.org/members/filippo-valdettaro), [Wenlong Chen](https://chenw20.github.io/wenlongchen.github.io//), [Aldo Faisal](https://faisallab.org/members/aldo-faisal), and [Yingzhen Li](http://yingzhenli.net/home/en/).
 
 <div align="center">
