@@ -21,11 +21,12 @@ parser.add_argument("--dataset_name", default="logistic_regression")
 parser.add_argument("--model_name", default="Qwen/Qwen2.5-14B", type=str)
 parser.add_argument("--model_port", default="8000", type=str)
 parser.add_argument("--model_ip", default="localhost", type=str)
+parser.add_argument("--is_local_client", default=1, type=int)
 
 parser.add_argument("--x_row_method", default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
-parser.add_argument("--x_range", default=None)
+parser.add_argument("--x_range", default="{'x1': [-12, 12, 0.2]}")
 parser.add_argument("--x_sample_seed", default=0, type=int)
 
 parser.add_argument("--numpy_seed", default=0, type=int)
@@ -34,13 +35,13 @@ parser.add_argument("--icl_sample_seed", default=0, type=int)
 parser.add_argument("--use_api_call_seed", default=0, type=int)
 parser.add_argument("--fixed_permutation_seed", default=0, type=int)
 
-parser.add_argument("--shots", default=3, type=int)
-parser.add_argument("--num_permutations", default="5", type=int)
+parser.add_argument("--shots", default=15, type=int)
+parser.add_argument("--num_permutations", default=10, type=int)
 parser.add_argument("--permute_context", default=1, type=int)
-parser.add_argument("--num_modified_z", default=3, type=int)
-parser.add_argument("--num_random_z", default=3, type=int)
+parser.add_argument("--num_modified_z", default=15, type=int)
+parser.add_argument("--num_random_z", default=15, type=int)
 parser.add_argument("--perturb_about_x", default=1, type=int)
-parser.add_argument("--perturbation_std", default=1.0, type=float)
+parser.add_argument("--perturbation_std", default=0.1, type=float)
 parser.add_argument("--num_candidates", default=3, type=int)
 parser.add_argument("--decimal_places", default=1, type=int)
 
@@ -59,6 +60,7 @@ class ToyClassificationExperimentConfig:
     model_name: str
     model_port: str
     model_ip: str
+    is_local_client: int
     numpy_seed: int
     data_split_seed: int
     icl_sample_seed: int
@@ -170,7 +172,7 @@ class ToyClassificationExperiment:
                     print(prompt)
 
                 # Get the prediction and probabilities from the model
-                pred, probs = chat(prompt, self.label_keys, seed=permutation_seed, model=self.config.model_name, port=self.config.model_port, ip=self.config.model_ip)
+                pred, probs = chat(prompt, self.label_keys, seed=permutation_seed, model=self.config.model_name, port=self.config.model_port, ip=self.config.model_ip, is_local_client=self.config.is_local_client)
                 
                 self.num_api_calls += 1
                 

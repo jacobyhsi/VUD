@@ -1,25 +1,44 @@
 import requests
 import math
+from openai import OpenAI, types
 
-def chat(message: str, label_keys, seed: int, model: str ="Qwen/Qwen2.5-14B", port: str = "8000", ip: str = "localhost"):
-    url = f"http://{ip}:{port}/v1/completions"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "model": model,
-        "prompt": message,
-        "temperature": 1.0,
-        "max_tokens": 5,
-        "logprobs": 10,
-        "seed": seed
-    }
+client = OpenAI()
 
-    response = requests.post(url, headers=headers, json=data).json()
-    text_output = response["choices"][0]["text"]
-    # print("\n### Full Output ###\n" + text_output)
+def chat(message: str, label_keys, seed: int, model: str ="Qwen/Qwen2.5-14B", port: str = "8000", ip: str = "localhost", is_local_client: bool | int = True):
+    if is_local_client:
+        url = f"http://{ip}:{port}/v1/completions"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "model": model,
+            "prompt": message,
+            "temperature": 1.0,
+            "max_tokens": 5,
+            "logprobs": 10,
+            "seed": seed
+        }
 
-    logprobs_list = response["choices"][0].get("logprobs", {}).get("top_logprobs", [])
-    tokens = response["choices"][0].get("logprobs", {}).get("tokens", [])
-
+        response: types.Completion = requests.post(url, headers=headers, json=data).json()
+        
+        text_output = response["choices"][0]["text"]
+        
+        logprobs_list = response["choices"][0].get("logprobs", {}).get("top_logprobs", [])
+        tokens = response["choices"][0].get("logprobs", {}).get("tokens", [])
+    else:
+        model = "gpt-4.1-nano-2025-04-14" # Default model for OpenAI API
+        response: types.Completion = client.completions.create(
+            model=model,
+            prompt=message,
+            max_tokens=5,
+            temperature=1.0,
+            logprobs=10,
+            seed=seed,
+        )
+        
+        text_output = response.choices[0].text
+        
+        logprobs_list = response.choices[0].logprobs.top_logprobs
+        tokens = response.choices[0].logprobs.tokens
+    
     label_logprobs = {}
     for i, token in enumerate(tokens):
         stripped_token = token.strip()

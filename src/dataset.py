@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import json
 import os
-from src.utils import TabularUtils, ToyDataUtils
+from src.utils import ToyDataUtils
 
 def load_dataset(
     data_path,
@@ -69,7 +69,8 @@ class ToyRegressionDataset(Dataset):
             axis=1
         )
         
-        return data   
+        return data  
+     
 class QADataset:
     def __init__(self, id_dataset, ood_dataset, dataset_size:int = 150, test_size:float = 0.8, seed: int = 123):
         self.id_dataset = id_dataset

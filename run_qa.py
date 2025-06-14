@@ -1,8 +1,6 @@
 import re
 import argparse
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from src.dataset import QADataset
 from src.prompt import Prompt
@@ -37,7 +35,6 @@ def main():
     # Interleave rows
     interleaved_rows = [row for pair in zip(test_id.iterrows(), test_ood.iterrows()) for row in pair]
     data_x = pd.DataFrame([row[1] for row in interleaved_rows])
-    # data_x = pd.concat([test_id, test_ood], ignore_index=True)
     num_x = len(data_x)
 
     prompt = Prompt(prompt_type="tabular")
@@ -218,7 +215,7 @@ def main():
         results.append(x_z)
 
         df_results = pd.concat(results, ignore_index=True)
-        df_results.to_csv(f"results_qa/df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL_new-z-prompt_bug-amend_instruct_dualgpu.csv", index=False)
+        df_results.to_csv(f"results_qa/df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL.csv", index=False)
 
 if __name__ == "__main__":
     # Argument Parser

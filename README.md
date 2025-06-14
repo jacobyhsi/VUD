@@ -15,12 +15,12 @@
 
 The following delineates the installation instructions. Clone this repository and navigate to it in your terminal. Create an environment using a preferred package manager.
 
-Note: can replace `micromamba` with `conda`. Alternatively can use `venv`.
+Note: can replace `conda` with `micromamba` or `venv`.
 
 ```
-micromamba create -n vud python=3.10
+conda create -n vud python=3.10
 
-micromamba activate vud
+conda activate vud
 
 pip install -r requirements.txt
 ```
@@ -32,11 +32,13 @@ pip freeze > requirements.txt
 ```
 
 ## Serving the LLM
-To run an experiment, first, serve the language model in a terminal. Then in a different terminal, run the experiment.
+To run an experiment, first, serve the language model in a terminal.
 
 ```
-vllm serve "Qwen/Qwen2.5-14B" --dtype auto --tensor-parallel-size 1 --max_model_len 8000 --gpu-memory-utilization 0.95
+bash run_llm.sh
 ```
+
+Then in a different terminal, run the desired experiments.
 
 ## Experiments
 
