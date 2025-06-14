@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=2 vllm serve "Qwen/Qwen2.5-14B" --dtype auto --tensor-parallel-size 1 --max_model_len 8000 --gpu-memory-utilization 0.95
+vllm serve "Qwen/Qwen2.5-14B" --dtype auto --tensor-parallel-size 1 --max_model_len 8000 --gpu-memory-utilization 0.95
