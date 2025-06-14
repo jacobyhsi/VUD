@@ -33,7 +33,7 @@ parser.add_argument("--data_split_seed", default=0, type=int)
 parser.add_argument("--icl_sample_seed", default=0, type=int)
 
 parser.add_argument("--shots", default=3, type=int)
-parser.add_argument("--num_permutations", default="5", type=int)
+parser.add_argument("--num_permutations", default=5, type=int)
 parser.add_argument("--num_modified_z", default=3, type=int)
 parser.add_argument("--num_random_z", default=3, type=int)
 parser.add_argument("--perturbation_std", default=1.0, type=float)
