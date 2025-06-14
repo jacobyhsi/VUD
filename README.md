@@ -48,8 +48,6 @@ Scripts:
 python run_toy_classification.py
 
 python run_toy_regression.py
-
-python run_toy_classification.py
 ```
 
 Parameters:
