@@ -157,3 +157,11 @@ Parameters:
 - `ood`: The name of the out-of-distribution dataset to use. Options: `boolqa`, `hotpotqa`, `pubmedqa`. Default is `pubmedqa`.
 - `num_D`: Number of in-context training examples. Default is `15`.
 - `num_z`: Number of z perturbations. Default is `20`.
+
+Evaluation:
+
+Before evaluating out-of-distribution results, ensure that the data paths are updated in `eval_ood.py`.
+
+```
+python eval_ood.py
+```

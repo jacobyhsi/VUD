@@ -7,6 +7,7 @@ from src.prompt import Prompt
 from src.chat import chat_tabular
 from src.utils import calculate_entropy
 
+# OOD Benchmark for Question Answering (QA) tasks using Deep Ensembles
 
 def sample_in_context_set(df_train: pd.DataFrame, num_d: int, seed: int) -> str:
     """Return a single string containing `num_d` randomly‑sampled in‑context rows.
