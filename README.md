@@ -165,3 +165,7 @@ Before evaluating out-of-distribution results, ensure that the data paths are up
 ```
 python eval_ood.py
 ```
+
+## Citation
+
+Please consider citing our paper if you find it helpful. Thank you :grinning:!
