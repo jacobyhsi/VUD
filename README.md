@@ -3,7 +3,7 @@
 
 <div align="center">
   <img src="imgs/overview.png" alt="Model Logo" width="800" style="margin-left:'auto' margin-right:'auto' display:'block'"/>
-  <p><em>Figure 1: Uncertainty Decomposition with Auxiliary Data (Above). Decomposition Example for Two-Moons Dataset (Below).</em>
+  <p><em>Figure 1: Uncertainty Decomposition with Auxiliary Data (Above). Decomposition for Two-Moons Dataset (Below).</em>
 </div>
 
 <div align="center">
