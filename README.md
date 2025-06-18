@@ -22,13 +22,14 @@ conda create -n vud python=3.10
 
 conda activate vud
 
-pip install -r requirements.txt
-```
-
-Update Environment
-
-```
-pip freeze > requirements.txt
+pip install vllm
+pip install ipykernel
+pip install -U ipywidgets
+pip install nbconvert
+pip install accelerate
+pip install openai
+pip install pandas matplotlib datasets scikit-learn flask
+pip install gpytorch botorch
 ```
 
 ## Serving the LLM
