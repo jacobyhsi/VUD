@@ -27,7 +27,6 @@ pip install ipykernel
 pip install -U ipywidgets
 pip install nbconvert
 pip install accelerate
-pip install openai
 pip install pandas matplotlib datasets scikit-learn flask
 pip install gpytorch botorch
 ```
