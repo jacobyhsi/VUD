@@ -13,8 +13,8 @@ from tqdm import tqdm
 
 def calculate_entropy(probs: dict):
     # Calculate entropy using all probabilities in the dictionary
-    probs = np.array(list(probs.values()))
-    entropy = -np.sum(probs * np.log2(probs))
+    probs_array = np.array(list(probs.values()))
+    entropy = -np.sum(probs_array * np.log2(probs_array))
     return round(entropy, 5)
 
 def calculate_discrete_mean(probs: dict):
@@ -66,8 +66,6 @@ def calculate_kl_divergence_for_z_data(df: pd.DataFrame):
 
 def calculate_min_Va_by_KL_threshold(save_data: pd.DataFrame, threshold: float = 0.01, forward_kl = True, uncertainty_type: str = "entropic"):
     valid_Va = []
-    if uncertainty_type not in ["entropic", "variance"]:
-        raise ValueError("Invalid uncertainty type. Choose either 'entropic' or 'variance'.")
     if uncertainty_type == "entropic":
         total_U = save_data["H[p(y|x,D)]"][0]
         aleatoric_key = "Va"
@@ -76,6 +74,8 @@ def calculate_min_Va_by_KL_threshold(save_data: pd.DataFrame, threshold: float =
         total_U = save_data["Var[y|x,D]"][0]
         aleatoric_key = "Va_variance"
         epistemic_key = "Ve_variance"
+    else:
+        raise ValueError(f"Invalid uncertainty type: {uncertainty_type}. Choose either 'entropic' or 'variance'.")
     for i, row in save_data.iterrows():
         if forward_kl:
             if row["kl_pyx_pyxz"] <= threshold:
@@ -101,8 +101,6 @@ def calculate_min_Va_by_KL_threshold(save_data: pd.DataFrame, threshold: float =
     return save_data
 
 def calculate_min_Va_by_KL_rank(save_data: pd.DataFrame, num_valid_Va: int = 5, forward_kl = True, upper_bound_by_total_U = False, uncertainty_type: str = "entropic"):
-    if uncertainty_type not in ["entropic", "variance"]:
-        raise ValueError("Invalid uncertainty type. Choose either 'entropic' or 'variance'.")
     if uncertainty_type == "entropic":
         total_U = save_data["H[p(y|x,D)]"][0]
         aleatoric_key = "Va"
@@ -111,6 +109,8 @@ def calculate_min_Va_by_KL_rank(save_data: pd.DataFrame, num_valid_Va: int = 5, 
         total_U = save_data["Var[y|x,D]"][0]
         aleatoric_key = "Va_variance"
         epistemic_key = "Ve_variance"
+    else:
+        raise ValueError(f"Invalid uncertainty type: {uncertainty_type}. Choose either 'entropic' or 'variance'.")
     if forward_kl:
         kl_values = save_data["kl_pyx_pyxz"]
     else:
@@ -140,7 +140,7 @@ def extract(text, tag_text: str = "output"):
     
 class ToyDataUtils:
     @staticmethod
-    def parse_features_to_note(row: pd.Series, feature_columns: list[str]):
+    def parse_features_to_note(row: pd.Series | pd.DataFrame, feature_columns: list[str]):
         note_parts = []
         for feature in feature_columns:
             note_parts.append(f"{feature} = {row[feature]}")
@@ -179,14 +179,14 @@ class ToyDataUtils:
         x_range = "{'x1': [0, 10, 0.2],'x2': [1, 5, 1]}"
         """
         
-        x_range = ast.literal_eval(x_range)
+        x_range_dict = ast.literal_eval(x_range)
         x_row = pd.DataFrame()
         
-        for feature, (start, end, step) in x_range.items():
-            x_range[feature] = np.round(np.arange(float(start), float(end), float(step)), decimal_places)
+        for feature, (start, end, step) in x_range_dict.items():
+            x_range_dict[feature] = np.round(np.arange(float(start), float(end), float(step)), decimal_places)
 
-        values = product(*x_range.values())
-        x_row = pd.DataFrame(values, columns=x_range.keys())
+        values = product(*x_range_dict.values())
+        x_row = pd.DataFrame(values, columns=x_range_dict.keys())
         
         x_row["label"] = 0
         x_row["note"] = x_row.apply(
