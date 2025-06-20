@@ -17,34 +17,43 @@ pd.set_option('display.max_columns', None)
 
 parser = argparse.ArgumentParser(description='Running Toy Classification')
 
-parser.add_argument("--dataset_name", default="logistic_regression")
+"""LLM API Configuration"""
 parser.add_argument("--model_name", default="Qwen/Qwen2.5-14B", type=str)
 parser.add_argument("--model_port", default="8000", type=str)
 parser.add_argument("--model_ip", default="localhost", type=str)
 parser.add_argument("--is_local_client", default=1, type=int)
 
-parser.add_argument("--x_row_method", default="x_range")
+"""Dataset Configuration"""
+parser.add_argument("--dataset_name", default="logistic_regression")
+parser.add_argument("--shots", default=15, type=int)
+
+"""X Configuration"""
+parser.add_argument("--x_row_method",type=str, default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
 parser.add_argument("--x_range", default="{'x1': [-12, 12, 0.2]}")
 parser.add_argument("--x_sample_seed", default=0, type=int)
+parser.add_argument("--decimal_places", default=1, type=int)
 
+"""Seed Configuration"""
 parser.add_argument("--numpy_seed", default=0, type=int)
 parser.add_argument("--data_split_seed", default=0, type=int)
 parser.add_argument("--icl_sample_seed", default=0, type=int)
 parser.add_argument("--use_api_call_seed", default=0, type=int)
 parser.add_argument("--fixed_permutation_seed", default=0, type=int)
 
-parser.add_argument("--shots", default=15, type=int)
+"""Permutation Related Configuration"""
 parser.add_argument("--num_permutations", default=10, type=int)
 parser.add_argument("--permute_context", default=1, type=int)
-parser.add_argument("--num_modified_z", default=15, type=int)
-parser.add_argument("--num_random_z", default=15, type=int)
-parser.add_argument("--perturb_about_x", default=1, type=int)
-parser.add_argument("--perturbation_std", default=0.1, type=float)
-parser.add_argument("--num_candidates", default=3, type=int)
-parser.add_argument("--decimal_places", default=1, type=int)
 
+"""Z Configuration"""
+parser.add_argument("--num_z", default=15, type=int)
+parser.add_argument("--perturbation_std", default=0.1, type=float)
+parser.add_argument("--num_bo_z", default=0, type=int)
+parser.add_argument("--perturb_about_x", default=1, type=int)
+parser.add_argument("--num_candidates", default=3, type=int)
+
+"""Save Configuration"""
 parser.add_argument("--run_name", default="test")
 parser.add_argument("--save_directory", default="other")
 parser.add_argument("--experiment_type", default="default")
@@ -56,35 +65,42 @@ args = parser.parse_args()
 
 @dataclass
 class ToyClassificationExperimentConfig:
-    dataset_name: str
     model_name: str
     model_port: str
     model_ip: str
     is_local_client: int
+    
+    dataset_name: str
+    shots: int
+
+    x_row_method: str
+    num_x_samples: int
+    x_features: str
+    x_range: str
+    x_sample_seed: int
+    decimal_places: int
+    
     numpy_seed: int
     data_split_seed: int
     icl_sample_seed: int
     use_api_call_seed: int
     fixed_permutation_seed: int
-    shots: int
-    x_row_method: int
-    num_x_samples: int
-    x_features: str
-    x_range: str
-    x_sample_seed: int
-    num_modified_z: int
-    num_random_z: int
+    
+    num_permutations: int
+    permute_context: int
+    
+    num_z: int
+    num_bo_z: int
     perturb_about_x: int
     perturbation_std: float
     num_candidates: int
-    num_permutations: int
-    permute_context: int
-    decimal_places: int
+
     run_name: int
     experiment_type: str
     save_directory: int
     x_save_value: int
     num_api_calls_save_value: int
+    
     verbose_output: int
     
 class ToyClassificationExperiment:
@@ -95,8 +111,10 @@ class ToyClassificationExperiment:
 
         self.prompter = ToyClassificationPrompt()
         
-        if self.config.num_random_z > self.config.num_modified_z:
-            raise ValueError("Number of initial random z values cannot be greater than number of modified z values.")
+        if self.config.num_bo_z > self.config.num_z:
+            raise ValueError("Number of bo z values cannot be greater than number of z values.")
+        if self.config.num_bo_z < 0:
+            raise ValueError("Number of bo z values cannot be negative.")
 
         self.data_preprocessing()
         
@@ -192,7 +210,8 @@ class ToyClassificationExperiment:
         return avg_probs
     
     def get_next_z(self, z_idx: int, x_idx: int):
-        if z_idx < self.config.num_random_z:
+        if z_idx < self.config.num_z - self.config.num_bo_z:
+            new_value = np.zeros(len(self.feature_columns), dtype=np.float32)
             for _ in range(100):
                 if self.config.perturb_about_x:
                     new_value = np.random.normal(self.x_row.iloc[x_idx][self.feature_columns].to_numpy(np.float32), self.config.perturbation_std * self.D_feature_stds, len(self.feature_columns))
@@ -216,7 +235,7 @@ class ToyClassificationExperiment:
                 
                 self.z_data.loc[z_idx] = modified_row
                                 
-        if z_idx >= self.config.num_random_z:
+        if z_idx >= self.config.num_z - self.config.num_bo_z:
             # Bayesian Optimization for new z values
     
             new_values = new_candidate(
@@ -270,7 +289,7 @@ class ToyClassificationExperiment:
                 
         save_dict_list = []
             
-        for i in tqdm(range(self.config.num_modified_z)):
+        for i in tqdm(range(self.config.num_z)):
 
             self.get_next_z(i, x_idx)
             
@@ -393,14 +412,14 @@ class ToyClassificationExperiment:
         print("x:", x)
         
         # Retrieve p(y|x,D)
-        avg_pyx_probs = self.x_row.loc[x_idx, [label for label in self.label_keys]].to_dict()
+        avg_pyx_probs = self.x_row.loc[x_idx][self.label_keys].to_dict()
         # Filter out only the relevant labels
         avg_pyx_probs = {k: v for k, v in avg_pyx_probs.items() if k in self.label_keys}
         Hyx = self.x_row.loc[x_idx, "H[p(y|x,D)]"]
                 
         save_dict_list = []
             
-        for i in tqdm(range(self.config.num_modified_z)):
+        for i in tqdm(range(self.config.num_z)):
 
             self.get_next_z(i, x_idx)
             
