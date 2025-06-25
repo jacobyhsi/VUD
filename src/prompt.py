@@ -2,9 +2,21 @@ import pandas as pd
 from typing import Optional
 
 PROMPT_TYPES_TO_TEXT_TEMPLATE = {
-    "tabular": \
-"""{icl}
-{note} <output>""",
+    "qa": \
+"""You are given a set of in-context examples and a new input. Your task is to predict the label of the new input.
+
+Please carefully review the following examples and their labels inside <output>{{labels}}</output> tags:
+
+{icl}
+
+Now, predict the label for this new input:
+
+{note}
+
+IMPORTANT: Output ONLY the label inside <output></output> tags. Do not add any explanation, text, or formatting. Your response must strictly follow this format:
+
+<output>{{label_prediction}}</output>
+""",
     "toy_classification": \
 """{icl}
  {note} <output>""",
@@ -19,10 +31,8 @@ PROMPT_TYPES_TO_TEXT_TEMPLATE = {
  {note} <reward>""",
 }
 
-
-
 class Prompt():
-    def __init__(self, prompt_type = "tabular") -> None:
+    def __init__(self, prompt_type) -> None:
         self.prompt_type = prompt_type
 
     @property

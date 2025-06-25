@@ -37,7 +37,7 @@ def main():
     data_x = pd.DataFrame([row[1] for row in interleaved_rows])
     num_x = len(data_x)
 
-    prompt = Prompt(prompt_type="tabular")
+    prompt = Prompt(prompt_type="qa")
 
     print(f"Processing: df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL_new-z-prompt_bug-amend_instruct_dualgpu.csv")
     results = []
