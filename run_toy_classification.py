@@ -362,13 +362,13 @@ class ToyClassificationExperiment:
             for label, prob in avg_pyxz_probs.items():
                 save_dict[f"p(y={label}|x,z,D)"] = prob
             save_dict["H[p(u|z,D)]"] = Huz
-            save_dict["Var[p(u|z,D)]"] = Var_uz
+            save_dict["Var[u|z,D]"] = Var_uz
             for key, entropy in Hyxuz.items():
                 save_dict[key] = entropy
             for key, variance in Var_yxuz.items():
                 save_dict[key] = variance
             save_dict["H[p(y|x,D)]"] = Hyx
-            save_dict["Var[p(y|x,D)]"] = total_variance
+            save_dict["Var[y|x,D]"] = total_variance
             save_dict["Va"] = Va
             save_dict["Ve"] = Ve
             save_dict["Va_variance"] = Va_variance
