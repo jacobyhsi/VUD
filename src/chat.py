@@ -2,7 +2,7 @@ import requests
 import math
 from openai import OpenAI, types
 
-client = OpenAI()
+OPENAI_API_KEY = "ADD_API_KEY_HERE"  # Replace with your OpenAI API key
 
 def chat(message: str, label_keys, seed: int, model: str ="Qwen/Qwen2.5-14B", port: str = "8000", ip: str = "localhost", is_local_client: bool | int = True):
     if is_local_client:
@@ -19,12 +19,15 @@ def chat(message: str, label_keys, seed: int, model: str ="Qwen/Qwen2.5-14B", po
 
         response: types.Completion = requests.post(url, headers=headers, json=data).json()
         
-        text_output = response["choices"][0]["text"]
+        text_output = response.choices[0].text
         
         logprobs_list = response["choices"][0].get("logprobs", {}).get("top_logprobs", [])
         tokens = response["choices"][0].get("logprobs", {}).get("tokens", [])
     else:
         model = "gpt-4.1-nano-2025-04-14" # Default model for OpenAI API
+        client = OpenAI(
+            api_key=OPENAI_API_KEY,
+        )
         response: types.Completion = client.completions.create(
             model=model,
             prompt=message,
