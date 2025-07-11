@@ -22,7 +22,6 @@ parser.add_argument("--model_name", default="Qwen/Qwen2.5-14B", type=str)
 parser.add_argument("--model_port", default="8000", type=str)
 parser.add_argument("--model_ip", default="localhost", type=str)
 parser.add_argument("--model_temperature", default=1, type=float)
-
 parser.add_argument("--is_local_client", default=1, type=int)
 
 """Dataset Configuration"""
@@ -117,7 +116,7 @@ class ToyRegressionExperiment:
         self.prompter = ToyRegressionPrompt()
         
         if self.config.num_bo_z > self.config.num_z:
-            raise ValueError("Number of initial random z values cannot be greater than number of modified z values.")
+            raise ValueError("Number of bo z values cannot be greater than number of z values.")
 
         self.data_preprocessing()
         

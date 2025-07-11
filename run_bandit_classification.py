@@ -7,7 +7,7 @@ from typing import Optional
 from tqdm import tqdm
 from dataclasses import dataclass
 
-from src.bandit import get_bandit, ClassificationBandit, ButtonsBandit
+from src.bandit import get_classification_bandit, ClassificationBandit, ButtonsBandit
 from src.bandit_algorithms import UCB1_Algorithm
 from src.bayesian_optimisation import new_candidate
 from src.utils import BanditClassificationUtils, calculate_entropy, calculate_kl_divergence, calculate_discrete_mean, calculate_discrete_variance, calculate_min_Va_by_KL_rank
@@ -18,34 +18,42 @@ pd.set_option('display.max_columns', None)
 
 parser = argparse.ArgumentParser(description='Running Toy Classification')
 
+"""LLM API Configuration"""
 parser.add_argument("--model_name", default="Qwen/Qwen2.5-14B", type=str)
 parser.add_argument("--model_port", default="8000", type=str)
 parser.add_argument("--model_ip", default="localhost", type=str)
+parser.add_argument("--model_temperature", default=1, type=float)
+parser.add_argument("--is_local_client", default=1, type=int)
 
+"""Bandit Configuration"""
 parser.add_argument("--bandit_name", default="buttons", type=str)
 parser.add_argument("--bandit_num_arms", default=5, type=int)
 parser.add_argument("--bandit_midpoint", default=0.5, type=float)
 parser.add_argument("--bandit_gap", default=0.2, type=float)
 parser.add_argument("--bandit_seed", default=0, type=int)
 parser.add_argument("--bandit_exploration_rate", default=2, type=float)
-
 parser.add_argument("--is_contextual_bandit", default=0, type=int)
 
+"""Experiment Configuration"""
 parser.add_argument("--num_trials", default=10, type=int)
 parser.add_argument("--num_random_trials", default=3, type=int)
 parser.add_argument("--uncertainty_type", default="epistemic", type=str)
 
-parser.add_argument("--numpy_seed", default=0, type=int)
-parser.add_argument("--use_api_call_seed", default=0, type=int)
+"""Permutation Related Configuration"""
+parser.add_argument("--num_permutations", default=10, type=int)
+parser.add_argument("--permute_context", default=1, type=int)
 
-parser.add_argument("--num_permutations", default=5, type=int)
-parser.add_argument("--num_modified_z", default=1, type=int)
-parser.add_argument("--num_random_z", default=1, type=int)
+"""Seed Configuration"""
+parser.add_argument("--numpy_seed", default=0, type=int)
+parser.add_argument("--fixed_permutation_seed", default=0, type=int)
+
+"""Z Configuration"""
+parser.add_argument("--num_z", default=1, type=int)
 parser.add_argument("--perturbation_std", default=1.0, type=float)
-parser.add_argument("--num_candidates", default=3, type=int)
 parser.add_argument("--decimal_places", default=3, type=int)
 parser.add_argument("--min_KL_rank", default=1, type=int)
 
+"""Save Configuration"""
 parser.add_argument("--run_name", default="test")
 parser.add_argument("--save_directory", default="other")
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
@@ -58,6 +66,9 @@ class BanditClassificationExperimentConfig:
     model_name: str
     model_port: str
     model_ip: str
+    model_temperature: float
+    is_local_client: int    
+    
     bandit_name: str
     bandit_num_arms: int
     bandit_midpoint: float
@@ -65,21 +76,25 @@ class BanditClassificationExperimentConfig:
     bandit_seed: int
     bandit_exploration_rate: float
     is_contextual_bandit: int
+    
     numpy_seed: int
+    fixed_permutation_seed: int
+    
     num_trials: int
     num_random_trials: int
     uncertainty_type: str
-    use_api_call_seed: int
-    num_modified_z: int
-    num_random_z: int
-    perturbation_std: float
-    num_candidates: int
     num_permutations: int
+    permute_context: int    
+    
+    num_z: int
+    perturbation_std: float
     decimal_places: int
     min_KL_rank: int
+    
     run_name: int
     save_directory: int
     num_api_calls_save_value: int
+    
     verbose_output: int
 
 class BanditClassificationExperiment:
@@ -90,12 +105,8 @@ class BanditClassificationExperiment:
 
         self.prompter = BanditClassificationPrompt()
         
-        if self.config.num_random_z > self.config.num_modified_z:
-            raise ValueError("Number of initial random z values cannot be greater than number of modified z values.")
-
         self.create_bandit()
         
-        self.use_api_call_seed = self.config.use_api_call_seed == 1
         self.num_api_calls = self.config.num_api_calls_save_value
         
         if self.config.uncertainty_type == "ucb1":
@@ -104,7 +115,7 @@ class BanditClassificationExperiment:
             self.UCB1_algorithm = None
             
     def create_bandit(self):
-        self.bandit: ClassificationBandit = get_bandit(
+        self.bandit: ClassificationBandit = get_classification_bandit(
             bandit_name=self.config.bandit_name,
             num_arms=self.config.bandit_num_arms,
             gap=self.config.bandit_gap,
@@ -161,14 +172,14 @@ class BanditClassificationExperiment:
             if self.config.verbose_output:
                 print(f"\n{probability_calculated} Seed {seed + 1}/{self.config.num_permutations}")
 
-            permutation_seed = self.num_api_calls if self.use_api_call_seed else seed
+            permutation_seed = self.num_api_calls
             
             try:
                 
                 prompt = self.prompter.get_general_prompt(
                     D_df=self.D_note_label_df,
                     query_note=query_note,
-                    permutation_seed=permutation_seed,
+                    permutation_seed=permutation_seed if self.config.permute_context else self.config.fixed_permutation_seed,
                     icl_z_note=icl_z_note,
                     icl_u_label=icl_u_label,
                 )
@@ -177,7 +188,15 @@ class BanditClassificationExperiment:
                     print(prompt)
 
                 # Get the prediction and probabilities from the model
-                pred, probs = chat(prompt, self.label_keys, seed=permutation_seed, model=self.config.model_name, port=self.config.model_port, ip=self.config.model_ip)
+                pred, probs = chat(
+                    prompt,
+                    self.label_keys,
+                    seed=permutation_seed,
+                    model=self.config.model_name,
+                    port=self.config.model_port,
+                    ip=self.config.model_ip,
+                    temperature=self.config.model_temperature,
+                    )
                 
                 self.num_api_calls += 1
                 
@@ -206,8 +225,10 @@ class BanditClassificationExperiment:
             
         for _ in range(100):
             if self.config.is_contextual_bandit:
-                new_value = self.rng.normal(np.array([float(x) for x in list(context.values())]),
-                    self.config.perturbation_std * self.D_feature_stds, len(self.feature_columns)
+                new_value = self.rng.normal(
+                    np.array([float(x) for x in list(context.values())]),
+                    self.config.perturbation_std * self.D_feature_stds,
+                    len(self.feature_columns)
                 )           
                 new_value = np.round(new_value, self.config.decimal_places)
                 if not any(np.array_equal(new_value, previous_z_value) for previous_z_value in self.previous_z_values):
@@ -246,7 +267,7 @@ class BanditClassificationExperiment:
                 
         save_dict_list = []
             
-        for i in range(self.config.num_modified_z):
+        for i in range(self.config.num_z):
 
             self.get_next_z(z_idx=i, context=context, action=action)
             
