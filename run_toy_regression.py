@@ -17,32 +17,47 @@ pd.set_option('display.max_columns', None)
 
 parser = argparse.ArgumentParser(description='Running Toy Classification')
 
-parser.add_argument("--dataset_name", default="linear_regression_1", type=str)
+"""LLM API Configuration"""
 parser.add_argument("--model_name", default="Qwen/Qwen2.5-14B", type=str)
 parser.add_argument("--model_port", default="8000", type=str)
 parser.add_argument("--model_ip", default="localhost", type=str)
+parser.add_argument("--model_temperature", default=1, type=float)
 
-parser.add_argument("--x_row_method", default="x_range")
+parser.add_argument("--is_local_client", default=1, type=int)
+
+"""Dataset Configuration"""
+parser.add_argument("--dataset_name", default="linear_regression_1", type=str)
+parser.add_argument("--D_size", default=3, type=int)
+
+"""X Configuration"""
+parser.add_argument("--x_row_method", type=str, default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
-parser.add_argument("--x_range", default=None)
-parser.add_argument("--x_sample_seed", default=0, type=int)
+parser.add_argument("--x_range", default="{'x1': [-12, 12, 0.2]}")
+parser.add_argument("--decimal_places", default=1, type=int)
 
+"""Permutation Related Configuration"""
+parser.add_argument("--num_permutations", default=10, type=int)
+parser.add_argument("--permute_context", default=1, type=int)
+
+"""Seed Configuration"""
 parser.add_argument("--numpy_seed", default=0, type=int)
 parser.add_argument("--data_split_seed", default=0, type=int)
 parser.add_argument("--icl_sample_seed", default=0, type=int)
+parser.add_argument("--fixed_permutation_seed", default=0, type=int)
 
-parser.add_argument("--shots", default=3, type=int)
-parser.add_argument("--num_permutations", default=5, type=int)
-parser.add_argument("--num_modified_z", default=3, type=int)
-parser.add_argument("--num_random_z", default=3, type=int)
-parser.add_argument("--perturbation_std", default=1.0, type=float)
+"""Z Configuration"""
+parser.add_argument("--num_z", default=15, type=int)
+parser.add_argument("--perturb_about_x", default=1, type=int)
+parser.add_argument("--perturbation_std", default=0.1, type=float)
+parser.add_argument("--num_bo_z", default=0, type=int)
 parser.add_argument("--num_candidates", default=3, type=int)
-parser.add_argument("--decimal_places", default=1, type=int)
+
+"""Distribution Approximation Configuration"""
 parser.add_argument("--num_outlier_pairs_to_remove", default=0, type=int)
 parser.add_argument("--std_method", default="default", type=str)
-parser.add_argument("--u_sample_method", default="llm", type=str)
 
+"""Save Configuration"""
 parser.add_argument("--run_name", default="test")
 parser.add_argument("--save_directory", default="other")
 parser.add_argument("--x_save_value", default=0, type=int)
@@ -53,32 +68,44 @@ args = parser.parse_args()
 
 @dataclass
 class ToyRegressionExperimentConfig:
-    dataset_name: str
     model_name: str
     model_port: str
     model_ip: str
-    numpy_seed: int
-    data_split_seed: int
-    icl_sample_seed: int
-    shots: int
-    x_row_method: int
+    model_temperature: float
+    is_local_client: int
+    
+    dataset_name: str
+    D_size: int
+    
+    x_row_method: str
     num_x_samples: int
     x_features: str
     x_range: str
-    x_sample_seed: int
-    num_modified_z: int
-    num_random_z: int
-    perturbation_std: float
-    num_candidates: int
-    num_permutations: int
+    x_sample_seed: int    
     decimal_places: int
+
+    numpy_seed: int
+    data_split_seed: int
+    icl_sample_seed: int
+    fixed_permutation_seed: int
+    
+    num_permutations: int
+    permute_context: int    
+    
+    num_z: int
+    perturb_about_x: int
+    perturbation_std: float
+    num_bo_z: int
+    num_candidates: int
+    
     num_outlier_pairs_to_remove: int
-    u_sample_method: str
     std_method: str
+    
     run_name: int
     save_directory: int
     x_save_value: int
     num_api_calls_save_value: int
+    
     verbose_output: int
 
 class ToyRegressionExperiment:
@@ -89,7 +116,7 @@ class ToyRegressionExperiment:
 
         self.prompter = ToyRegressionPrompt()
         
-        if self.config.num_random_z > self.config.num_modified_z:
+        if self.config.num_bo_z > self.config.num_z:
             raise ValueError("Number of initial random z values cannot be greater than number of modified z values.")
 
         self.data_preprocessing()
@@ -122,7 +149,8 @@ class ToyRegressionExperiment:
             
         self.num_x_values = len(self.x_row)
 
-        D_rows = data.sample(n=self.config.shots, random_state=self.config.icl_sample_seed)
+        D_rows = data.sample(n=self.config.D_size, random_state=self.config.icl_sample_seed)
+        self.D_feature_means = D_rows[self.feature_columns].mean().to_numpy()
         self.D_feature_stds = D_rows[self.feature_columns].std().to_numpy()
 
         self.D_note_label_df = D_rows[['note', 'label']]
@@ -135,9 +163,20 @@ class ToyRegressionExperiment:
         self.min_D_label = D_rows['label'].min()
     
     def get_next_z(self, z_idx: int, x_idx: int):
-        if z_idx < self.config.num_random_z:
+        if z_idx < self.config.num_z - self.config.num_bo_z:
             for _ in range(100):
-                new_value = np.random.normal(self.x_row.iloc[x_idx][self.feature_columns].to_numpy(np.float32), self.config.perturbation_std * self.D_feature_stds, len(self.feature_columns))
+                if self.config.perturb_about_x:
+                    new_value = np.random.normal(
+                        self.x_row.iloc[x_idx][self.feature_columns].to_numpy(np.float32),
+                        self.config.perturbation_std * self.D_feature_stds,
+                        len(self.feature_columns)
+                    )
+                else:
+                    new_value = np.random.normal(
+                        self.D_feature_means,
+                        self.config.perturbation_std * self.D_feature_stds,
+                        len(self.feature_columns)
+                    )
                 new_value = np.round(new_value, self.config.decimal_places)
                 if not any(np.array_equal(new_value, previous_z_value) for previous_z_value in self.previous_z_values):
                     self.previous_z_values.append(new_value)
@@ -156,7 +195,7 @@ class ToyRegressionExperiment:
                 
                 self.z_data.loc[z_idx] = modified_row
                                 
-        if z_idx >= self.config.num_random_z:
+        if z_idx >= self.config.num_z - self.config.num_bo_z:
             # Bayesian Optimization for new z values
     
             new_values = new_candidate(
@@ -217,7 +256,7 @@ class ToyRegressionExperiment:
                 prompt = self.prompter.get_general_prompt(
                     D_df=self.D_note_label_df,
                     query_note=query_note,
-                    permutation_seed=permutation_seed, # to avoid seed collision
+                    permutation_seed=permutation_seed if self.config.permute_context else self.config.fixed_permutation_seed,
                     icl_z_note=icl_z_note,
                     icl_u_label=icl_u_label,
                 )
@@ -227,7 +266,7 @@ class ToyRegressionExperiment:
                     print(prompt)
 
                 # Get the prediction and probabilities from the model
-                response = chat_response_only(prompt, seed=permutation_seed, model=self.config.model_name, port=self.config.model_port, ip=self.config.model_ip)
+                response = chat_response_only(prompt, seed=permutation_seed, model=self.config.model_name, port=self.config.model_port, ip=self.config.model_ip, temperature=self.config.model_temperature, is_local_client=self.config.is_local_client)
                 
                 self.num_api_calls += 1     
                 attempts += 1        
@@ -257,27 +296,6 @@ class ToyRegressionExperiment:
             print(f"\nGaussian Approximation for {probability_calculated}: mean = {gaussian.mean}, std = {gaussian.std}")
             
         return gaussian, distribution_samples
-
-    def sample_u_values_uniform(self):
-        # Sample u from uniform distribution
-        u_samples = []
-        successful_seeds = 0
-        attempts = 0
-        while successful_seeds < self.config.num_permutations and attempts < 100:
-            u_sample = np.random.uniform(self.min_D_label, self.max_D_label)
-            u_sample = np.round(u_sample, self.config.decimal_places)
-            if u_sample not in u_samples:
-                u_samples.append(u_sample)
-                successful_seeds += 1
-            attempts += 1
-        
-        if successful_seeds == 0:
-            raise ValueError(f"All seeds failed for u samples.")
-        
-        if self.config.verbose_output:
-            print(f"u_samples: {u_samples}")
-        
-        return u_samples 
             
     def process_single_x_value(self, x_idx: int):
         self.previous_z_values = []
@@ -295,7 +313,7 @@ class ToyRegressionExperiment:
                 
         save_dict_list = []
             
-        for i in tqdm(range(self.config.num_modified_z)):
+        for i in tqdm(range(self.config.num_z)):
 
             self.get_next_z(i, x_idx)
             
@@ -304,12 +322,7 @@ class ToyRegressionExperiment:
             z = row['note']
             
             # Compute p(u|z,D)
-            if self.config.u_sample_method == "llm":
-                _, u_samples = self.calculate_gaussian(z, "p(u|z,D)", icl_z_note=z)
-            elif self.config.u_sample_method == "uniform":
-                u_samples = self.sample_u_values_uniform()
-            else:
-                raise ValueError(f"Invalid u sample method: {self.config.u_sample_method}")
+            _, u_samples = self.calculate_gaussian(z, "p(u|z,D)", icl_z_note=z)
                         
             # Compute p(y|x,u,z,D)
             pyxuz_distributions: list[GaussianDistribution] = []

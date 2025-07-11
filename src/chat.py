@@ -4,14 +4,14 @@ from openai import OpenAI, types
 
 OPENAI_API_KEY = "ADD_API_KEY_HERE"  # Replace with your OpenAI API key
 
-def chat(message: str, label_keys, seed: int, model: str ="Qwen/Qwen2.5-14B", port: str = "8000", ip: str = "localhost", is_local_client: bool | int = True):
+def chat(message: str, label_keys, seed: int, temperature: float=1.0, model: str ="Qwen/Qwen2.5-14B", port: str = "8000", ip: str = "localhost", is_local_client: bool | int = True):
     if is_local_client:
         url = f"http://{ip}:{port}/v1/completions"
         headers = {"Content-Type": "application/json"}
         data = {
             "model": model,
             "prompt": message,
-            "temperature": 1.0,
+            "temperature": temperature,
             "max_tokens": 5,
             "logprobs": 10,
             "seed": seed
@@ -32,7 +32,7 @@ def chat(message: str, label_keys, seed: int, model: str ="Qwen/Qwen2.5-14B", po
             model=model,
             prompt=message,
             max_tokens=5,
-            temperature=1.0,
+            temperature=temperature,
             logprobs=10,
             seed=seed,
         )
@@ -59,20 +59,36 @@ def chat(message: str, label_keys, seed: int, model: str ="Qwen/Qwen2.5-14B", po
 
     return text_output, normalized_probs
 
-def chat_response_only(message: str, seed: int, max_tokens: int=10, temperature: float=1.0, model: str="Qwen/Qwen2.5-14B", port: str="8000", ip: str="localhost"):
-    url = f"http://{ip}:{port}/v1/completions"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "model": model,
-        "prompt": message,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "logprobs": 10,
-        "seed": seed
-    }
+def chat_response_only(message: str, seed: int, max_tokens: int=10, temperature: float=1.0, model: str="Qwen/Qwen2.5-14B", port: str="8000", ip: str="localhost", is_local_client: bool | int = True):
+    if is_local_client:
+        url = f"http://{ip}:{port}/v1/completions"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "model": model,
+            "prompt": message,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "logprobs": 10,
+            "seed": seed
+        }
 
-    response = requests.post(url, headers=headers, json=data).json()
-    text_output = response["choices"][0]["text"]
+        response = requests.post(url, headers=headers, json=data).json()
+        text_output = response["choices"][0]["text"]
+    else:
+        model = "gpt-4.1-nano-2025-04-14" # Default model for OpenAI API
+        client = OpenAI(
+            api_key=OPENAI_API_KEY,
+        )
+        response: types.Completion = client.completions.create(
+            model=model,
+            prompt=message,
+            max_tokens=5,
+            temperature=1.0,
+            logprobs=10,
+            seed=seed,
+        )
+        
+        text_output = response.choices[0].text
     
     return text_output
 
