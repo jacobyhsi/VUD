@@ -196,6 +196,7 @@ class BanditClassificationExperiment:
                     port=self.config.model_port,
                     ip=self.config.model_ip,
                     temperature=self.config.model_temperature,
+                    is_local_client=self.config.is_local_client,
                     )
                 
                 self.num_api_calls += 1
