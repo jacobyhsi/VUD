@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-class MultiArmBandit:
+class ClassificationBandit:
     def __init__(self, seed: int = 0):
         self.rng = np.random.default_rng(seed)
     
@@ -17,7 +17,7 @@ class MultiArmBandit:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
     
-    def get_context_feature_cols(self) -> dict:
+    def get_context_feature_cols(self) -> dict | list:
         """
         Get the context features for the bandit.
         """
@@ -29,7 +29,7 @@ class MultiArmBandit:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
     
-    def get_next_context(self) -> pd.DataFrame:
+    def get_next_context(self) -> pd.DataFrame | None:
         """
         Get the context for the bandit.
         """
@@ -41,14 +41,14 @@ class MultiArmBandit:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
     
-class ClassificationBandit(MultiArmBandit):
+class ClassificationBandit(ClassificationBandit):
     def get_reward_space(self) -> list:
         """
         Get the reward values for the bandit.
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
     
-class RegressionBandit(MultiArmBandit):
+class RegressionBandit(ClassificationBandit):
     pass   
 
 class ButtonsBandit(ClassificationBandit):
@@ -62,7 +62,7 @@ class ButtonsBandit(ClassificationBandit):
         self.midpoint = midpoint
         self.gap = gap
     
-    def get_reward(self, action: int|str) -> float|int:
+    def get_reward(self, action: int|str, **kwargs) -> float|int:
         """
         Get the reward for a given button action.
         """
@@ -80,7 +80,7 @@ class ButtonsBandit(ClassificationBandit):
 
         return reward
     
-    def get_optimal_mean_reward(self) -> float|int:
+    def get_optimal_mean_reward(self, **kwargs) -> float|int:
         """
         Get the optimal mean reward for a given button action.
         """
@@ -99,3 +99,20 @@ class ButtonsBandit(ClassificationBandit):
     
     def optimal_action(self, **kwargs) -> int:
         return self.best_arm
+    
+CLASSIFICATION_BANDIT_TYPE_TO_CLASS = {
+    "buttons": ButtonsBandit,
+}
+    
+def get_classification_bandit(
+    bandit_name: str = "buttons",
+    **bandit_kwargs
+) -> ClassificationBandit:
+    """
+    Get a bandit instance based on the bandit type.
+    """
+    if bandit_name not in CLASSIFICATION_BANDIT_TYPE_TO_CLASS:
+        raise ValueError(f"Bandit type {bandit_name} is not supported.")
+    
+    bandit_class = CLASSIFICATION_BANDIT_TYPE_TO_CLASS[bandit_name]
+    return bandit_class(**bandit_kwargs)

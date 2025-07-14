@@ -7,7 +7,7 @@ from typing import Optional
 from tqdm import tqdm
 from dataclasses import dataclass
 
-from src.bandit import get_bandit, ButtonsBandit
+from src.bandit import get_classification_bandit, ButtonsBandit
 from src.bandit_algorithms import UCB1_Algorithm
 from src.chat import chat_response_only
 
@@ -19,7 +19,8 @@ parser.add_argument("--model_name", default="Qwen/Qwen2.5-14B-Instruct", type=st
 parser.add_argument("--model_port", default="8000", type=str)
 parser.add_argument("--model_ip", default="localhost", type=str)
 parser.add_argument("--max_tokens", default=1000, type=int)
-parser.add_argument("--temperature", default=0.0, type=float)
+parser.add_argument("--model_temperature", default=0.0, type=float)
+parser.add_argument("--is_local_client", default=1, type=int)
 
 parser.add_argument("--bandit_name", default="buttons", type=str)
 parser.add_argument("--bandit_num_arms", default=5, type=int)
@@ -43,7 +44,8 @@ class BanditClassificationBenchmarkExperimentConfig:
     model_port: str
     model_ip: str
     max_tokens: int
-    temperature: float
+    model_temperature: float
+    is_local_client: int
 
     bandit_name: str
     bandit_num_arms: int
@@ -90,7 +92,7 @@ class BanditClassificationBenchmarkExperiment:
         self.num_api_calls = self.config.num_api_calls_save_value
         
     def create_bandit(self):
-        self.bandit: ButtonsBandit = get_bandit(
+        self.bandit: ButtonsBandit = get_classification_bandit(
             bandit_name=self.config.bandit_name,
             num_arms=self.config.bandit_num_arms,
             gap=self.config.bandit_gap,
@@ -166,10 +168,11 @@ class BanditClassificationBenchmarkExperiment:
                     message=full_prompt,
                     seed=seed,
                     max_tokens=self.config.max_tokens + attempt * 500,
-                    temperature=self.config.temperature,
+                    temperature=self.config.model_temperature,
                     model=self.config.model_name,
                     port=self.config.model_port,
-                    ip=self.config.model_ip
+                    ip=self.config.model_ip,
+                    is_local_client=self.config.is_local_client,
                 )
                 
                 self.num_api_calls += 1

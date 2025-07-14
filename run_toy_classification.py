@@ -17,37 +17,45 @@ pd.set_option('display.max_columns', None)
 
 parser = argparse.ArgumentParser(description='Running Toy Classification')
 
-parser.add_argument("--dataset_name", default="logistic_regression")
+"""LLM API Configuration"""
 parser.add_argument("--model_name", default="Qwen/Qwen2.5-14B", type=str)
 parser.add_argument("--model_port", default="8000", type=str)
 parser.add_argument("--model_ip", default="localhost", type=str)
+parser.add_argument("--model_temperature", default=1, type=float)
 parser.add_argument("--is_local_client", default=1, type=int)
 
-parser.add_argument("--x_row_method", default="x_range")
+"""Dataset Configuration"""
+parser.add_argument("--dataset_name", default="logistic_regression")
+parser.add_argument("--D_size", default=15, type=int)
+
+"""X Configuration"""
+parser.add_argument("--x_row_method",type=str, default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
 parser.add_argument("--x_range", default="{'x1': [-12, 12, 0.2]}")
 parser.add_argument("--x_sample_seed", default=0, type=int)
+parser.add_argument("--decimal_places", default=1, type=int)
 
+"""Seed Configuration"""
 parser.add_argument("--numpy_seed", default=0, type=int)
 parser.add_argument("--data_split_seed", default=0, type=int)
 parser.add_argument("--icl_sample_seed", default=0, type=int)
-parser.add_argument("--use_api_call_seed", default=0, type=int)
 parser.add_argument("--fixed_permutation_seed", default=0, type=int)
 
-parser.add_argument("--shots", default=15, type=int)
+"""Permutation Related Configuration"""
 parser.add_argument("--num_permutations", default=10, type=int)
 parser.add_argument("--permute_context", default=1, type=int)
-parser.add_argument("--num_modified_z", default=15, type=int)
-parser.add_argument("--num_random_z", default=15, type=int)
+
+"""Z Configuration"""
+parser.add_argument("--num_z", default=15, type=int)
 parser.add_argument("--perturb_about_x", default=1, type=int)
 parser.add_argument("--perturbation_std", default=0.1, type=float)
+parser.add_argument("--num_bo_z", default=0, type=int)
 parser.add_argument("--num_candidates", default=3, type=int)
-parser.add_argument("--decimal_places", default=1, type=int)
 
+"""Save Configuration"""
 parser.add_argument("--run_name", default="test")
 parser.add_argument("--save_directory", default="other")
-parser.add_argument("--experiment_type", default="default")
 parser.add_argument("--x_save_value", default=0, type=int)
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
@@ -56,35 +64,41 @@ args = parser.parse_args()
 
 @dataclass
 class ToyClassificationExperimentConfig:
-    dataset_name: str
     model_name: str
     model_port: str
     model_ip: str
+    model_temperature: float
     is_local_client: int
-    numpy_seed: int
-    data_split_seed: int
-    icl_sample_seed: int
-    use_api_call_seed: int
-    fixed_permutation_seed: int
-    shots: int
-    x_row_method: int
+    
+    dataset_name: str
+    D_size: int
+
+    x_row_method: str
     num_x_samples: int
     x_features: str
     x_range: str
     x_sample_seed: int
-    num_modified_z: int
-    num_random_z: int
-    perturb_about_x: int
-    perturbation_std: float
-    num_candidates: int
+    decimal_places: int
+    
+    numpy_seed: int
+    data_split_seed: int
+    icl_sample_seed: int
+    fixed_permutation_seed: int
+    
     num_permutations: int
     permute_context: int
-    decimal_places: int
+    
+    num_z: int
+    perturb_about_x: int
+    perturbation_std: float
+    num_bo_z: int
+    num_candidates: int
+
     run_name: int
-    experiment_type: str
     save_directory: int
     x_save_value: int
     num_api_calls_save_value: int
+    
     verbose_output: int
     
 class ToyClassificationExperiment:
@@ -95,12 +109,13 @@ class ToyClassificationExperiment:
 
         self.prompter = ToyClassificationPrompt()
         
-        if self.config.num_random_z > self.config.num_modified_z:
-            raise ValueError("Number of initial random z values cannot be greater than number of modified z values.")
+        if self.config.num_bo_z > self.config.num_z:
+            raise ValueError("Number of bo z values cannot be greater than number of z values.")
+        if self.config.num_bo_z < 0:
+            raise ValueError("Number of bo z values cannot be negative.")
 
         self.data_preprocessing()
         
-        self.use_api_call_seed = self.config.use_api_call_seed == 1
         self.num_api_calls = self.config.num_api_calls_save_value
 
     def data_preprocessing(self):
@@ -129,7 +144,7 @@ class ToyClassificationExperiment:
             
         self.num_x_values = len(self.x_row)
 
-        D_rows = data.sample(n=self.config.shots, random_state=self.config.icl_sample_seed)
+        D_rows = data.sample(n=self.config.D_size, random_state=self.config.icl_sample_seed)
         self.D_feature_means = D_rows[self.feature_columns].mean().to_numpy()
         self.D_feature_stds = D_rows[self.feature_columns].std().to_numpy()
 
@@ -155,10 +170,10 @@ class ToyClassificationExperiment:
             # p(y|x)
             if self.config.verbose_output:
                 print(f"\n{probability_calculated} Seed {seed + 1}/{self.config.num_permutations}")
-
-            permutation_seed = self.num_api_calls if self.use_api_call_seed else seed
             
             try:
+                permutation_seed = self.num_api_calls        
+        
                 prompt = self.prompter.get_general_prompt(
                     D_df=self.D_note_label_df,
                     query_note=query_note,
@@ -172,10 +187,8 @@ class ToyClassificationExperiment:
                     print(prompt)
 
                 # Get the prediction and probabilities from the model
-                pred, probs = chat(prompt, self.label_keys, seed=permutation_seed, model=self.config.model_name, port=self.config.model_port, ip=self.config.model_ip, is_local_client=self.config.is_local_client)
-                
-                self.num_api_calls += 1
-                
+                pred, probs = chat(prompt, self.label_keys, seed=permutation_seed, model=self.config.model_name, port=self.config.model_port, ip=self.config.model_ip, temperature=self.config.model_temperature, is_local_client=self.config.is_local_client)
+                                
                 # Accumulate probabilities
                 for label, prob in probs.items():
                     avg_probs[label] += prob
@@ -183,7 +196,9 @@ class ToyClassificationExperiment:
                 successful_seeds += 1
             except:
                 print(f"Seed {seed + 1} failed.")
-        
+
+            self.num_api_calls += 1
+
         avg_probs = {label: prob / successful_seeds for label, prob in avg_probs.items()}
         
         if self.config.verbose_output:
@@ -192,12 +207,21 @@ class ToyClassificationExperiment:
         return avg_probs
     
     def get_next_z(self, z_idx: int, x_idx: int):
-        if z_idx < self.config.num_random_z:
+        if z_idx < self.config.num_z - self.config.num_bo_z:
+            new_value = np.zeros(len(self.feature_columns), dtype=np.float32)
             for _ in range(100):
                 if self.config.perturb_about_x:
-                    new_value = np.random.normal(self.x_row.iloc[x_idx][self.feature_columns].to_numpy(np.float32), self.config.perturbation_std * self.D_feature_stds, len(self.feature_columns))
+                    new_value = np.random.normal(
+                        self.x_row.iloc[x_idx][self.feature_columns].to_numpy(np.float32),
+                        self.config.perturbation_std * self.D_feature_stds,
+                        len(self.feature_columns)
+                    )
                 else:
-                    new_value = np.random.normal(self.D_feature_means, self.config.perturbation_std * self.D_feature_stds, len(self.feature_columns))
+                    new_value = np.random.normal(
+                        self.D_feature_means,
+                        self.config.perturbation_std * self.D_feature_stds,
+                        len(self.feature_columns)
+                    )
                 new_value = np.round(new_value, self.config.decimal_places)
                 if not any(np.array_equal(new_value, previous_z_value) for previous_z_value in self.previous_z_values):
                     self.previous_z_values.append(new_value)
@@ -216,7 +240,7 @@ class ToyClassificationExperiment:
                 
                 self.z_data.loc[z_idx] = modified_row
                                 
-        if z_idx >= self.config.num_random_z:
+        if z_idx >= self.config.num_z - self.config.num_bo_z:
             # Bayesian Optimization for new z values
     
             new_values = new_candidate(
@@ -270,7 +294,7 @@ class ToyClassificationExperiment:
                 
         save_dict_list = []
             
-        for i in tqdm(range(self.config.num_modified_z)):
+        for i in tqdm(range(self.config.num_z)):
 
             self.get_next_z(i, x_idx)
             
@@ -343,13 +367,13 @@ class ToyClassificationExperiment:
             for label, prob in avg_pyxz_probs.items():
                 save_dict[f"p(y={label}|x,z,D)"] = prob
             save_dict["H[p(u|z,D)]"] = Huz
-            save_dict["Var[p(u|z,D)]"] = Var_uz
+            save_dict["Var[u|z,D]"] = Var_uz
             for key, entropy in Hyxuz.items():
                 save_dict[key] = entropy
             for key, variance in Var_yxuz.items():
                 save_dict[key] = variance
             save_dict["H[p(y|x,D)]"] = Hyx
-            save_dict["Var[p(y|x,D)]"] = total_variance
+            save_dict["Var[y|x,D]"] = total_variance
             save_dict["Va"] = Va
             save_dict["Ve"] = Ve
             save_dict["Va_variance"] = Va_variance
@@ -363,149 +387,14 @@ class ToyClassificationExperiment:
         save_df = pd.DataFrame(save_dict_list)
         
         return save_df
-    
-    # Experiment 2: Sweep x values first
-    
-    def sweep_x_values_for_pyx(self):
-        
-        for x_idx in tqdm(range(self.num_x_values)):
-            x = self.x_row['note'].iloc[x_idx]
-            print("x:", x)
-            
-            # Compute p(y|x,D)
-            avg_pyx_probs = self.calculate_avg_probs(x, "p(y|x,D)")
-            Hyx = calculate_entropy(avg_pyx_probs)
-            
-            for label in self.label_keys:
-                self.x_row.loc[x_idx, label] = avg_pyx_probs[label]
-            
-            self.x_row.loc[x_idx, "H[p(y|x,D)]"] = Hyx
-            
-        self.x_row.to_csv(f"results/{self.config.dataset_name}/{self.config.save_directory}/x_{self.config.run_name}.csv", index=False)
-        
-    def process_single_x_value_post_sweep(self, x_idx: int):
-        self.previous_z_values = []
-
-        self.z_BO_maximisation_objective = []
-    
-        x = self.x_row['note'].iloc[x_idx]
-        x_y = self.x_row['label'].iloc[x_idx]
-        print("x:", x)
-        
-        # Retrieve p(y|x,D)
-        avg_pyx_probs = self.x_row.loc[x_idx, [label for label in self.label_keys]].to_dict()
-        # Filter out only the relevant labels
-        avg_pyx_probs = {k: v for k, v in avg_pyx_probs.items() if k in self.label_keys}
-        Hyx = self.x_row.loc[x_idx, "H[p(y|x,D)]"]
-                
-        save_dict_list = []
-            
-        for i in tqdm(range(self.config.num_modified_z)):
-
-            self.get_next_z(i, x_idx)
-            
-            row = self.z_data.iloc[i]
-            
-            z = row['note']
-            
-            # Compute p(u|z,D) if not already computed
-            # Find z in the previous x_data
-            if z in self.x_row['note'].values:
-                avg_puz_probs = self.x_row.loc[self.x_row['note'] == z, [label for label in self.label_keys]].iloc[0].to_dict()
-                print(f"Found z in x_data: {avg_puz_probs}")
-            else:
-                avg_puz_probs = self.calculate_avg_probs(z, "p(u|z,D)")
-            
-            # Compute p(y|x,u,z,D)
-            avg_pyxu_z_probs = {}
-            
-            for outer_label in self.label_keys:
-                probability_calculated = f"p(y|x,u={outer_label},z,D)"
-                
-                avg_probs_for_outer_label = self.calculate_avg_probs(
-                    query_note=x,
-                    probability_calculated=probability_calculated,
-                    icl_z_note=z,
-                    icl_u_label=outer_label
-                )
-                
-                avg_pyxu_z_probs.update({probability_calculated: avg_probs_for_outer_label})
-            
-            # Marginalisation
-            avg_pyxz_probs = {}
-
-            for label in self.label_keys:  # Iterate over all possible values of y
-                avg_pyxz_probs[label] = sum(
-                    avg_pyxu_z_probs[f"p(y|x,u={u_label},z,D)"][label] * avg_puz_probs[u_label]
-                    for u_label in self.label_keys
-                )
-                
-            # Entropy
-            Huz = calculate_entropy(avg_puz_probs)
-            Hyxuz = {f"H[{key}]": calculate_entropy(value) for key, value in avg_pyxu_z_probs.items()}          
-            E_Hyxz = 0.0
-            for label in self.label_keys:
-                E_Hyxz += Hyxuz[f"H[p(y|x,u={label},z,D)]"]*avg_puz_probs[label]
-            Va = np.round(E_Hyxz, 5)
-            Ve = Hyx - Va
-            
-            # KL Divergence
-            kl_pyx_pyxz = calculate_kl_divergence(avg_pyx_probs, avg_pyxz_probs)
-            kl_pyxz_pyx = calculate_kl_divergence(avg_pyxz_probs, avg_pyx_probs)
-            
-            self.z_BO_maximisation_objective.append(-Va - kl_pyx_pyxz)
-        
-            # Save            
-            save_dict = {f"z_{feature}": row[feature] for feature in self.feature_columns}
-            save_dict["z_note"] = z
-            save_dict_x = {f"x_{feature}": self.x_row.iloc[x_idx][feature] for feature in self.feature_columns}
-            save_dict_x["x_note"] = x
-            save_dict = {**save_dict, **save_dict_x}
-            for label, prob in avg_pyx_probs.items():
-                save_dict[f"p(y={label}|x,D)"] = prob
-            for label, prob in avg_puz_probs.items():
-                save_dict[f"p(u={label}|z,D)"] = prob
-            for key, outer_label_probs in avg_pyxu_z_probs.items():
-                for label, prob in outer_label_probs.items():
-                    new_key = re.sub(r'y', f'y={label}', key, count=1)
-                    save_dict[new_key] = prob
-            for label, prob in avg_pyxz_probs.items():
-                save_dict[f"p(y={label}|x,z,D)"] = prob
-            save_dict["H[p(u|z,D)]"] = Huz
-            for key, entropy in Hyxuz.items():
-                save_dict[key] = entropy
-            save_dict["H[p(y|x,D)]"] = Hyx
-            save_dict["Va"] = Va
-            save_dict["Ve"] = Ve
-            save_dict["kl_pyx_pyxz"] = kl_pyx_pyxz
-            save_dict["kl_pyxz_pyx"] = kl_pyxz_pyx
-            save_dict["api_calls"] = self.num_api_calls
-            
-            save_dict_list.append(save_dict)
-            
-        save_df = pd.DataFrame(save_dict_list)
-        
-        return save_df
             
     def run_experiment_default(self):
         for x_idx in range(self.num_x_values):
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(f"results/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
-    
-    def run_experiment_sweep(self):
-        self.sweep_x_values_for_pyx()
-        
-        for x_idx in range(self.num_x_values):
-            save_df = self.process_single_x_value_post_sweep(x_idx)
-            save_df.to_csv(f"results/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
+            save_df.to_csv(f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
     
     def run_experiment(self):
-        if self.config.experiment_type == "default":
-            self.run_experiment_default()
-        elif self.config.experiment_type == "sweep":
-            self.run_experiment_sweep()
-        else:
-            raise ValueError("Invalid experiment type. Choose 'default' or 'sweep'.")
+        self.run_experiment_default()
         
         print(f"Total API Calls: {self.num_api_calls}")
         
