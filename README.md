@@ -44,25 +44,29 @@ Then in a different terminal, run the desired experiments.
 
 ### Toy Datasets
 
-Scripts:
+Example Scripts:
 
 ```
 python run_toy_classification.py
 
+python run_toy_classification.py --model_name meta-llama/Meta-Llama-3-8B --dataset_name moons_1 --D_size 30 --x_range "{'x1': [-3.0, 3.0, 0.2], 'x2': [-3.0, 3.0, 0.2]}" --decimal_places 2 --num_z 10 --save_directory "example" --run_name "30_ICL_10_Z"
+
 python run_toy_regression.py
+
+python run_toy_regression.py --model_name Qwen/Qwen2.5-7B --D_size 20 --x_features "{'x1': [-1.2, 0.4, 1.5, 2.9, 3.4]}" --perturbation_std 1.0 --num_z 20 --num_bo_z 10
 ```
 
 Parameters:
 
 API Parameters
-- `model_name`: The name of the model to use for predictions. Options: `Qwen/Qwen2.5-14B`, `Qwen/Qwen2.5-14B` and `meta-llama/Meta-Llama-3-8B`. `Qwen/Qwen2.5-14B` is the default.
+- `model_name`: The name of the model to use for predictions. Options: `Qwen/Qwen2.5-7B`, `Qwen/Qwen2.5-14B` and `meta-llama/Meta-Llama-3-8B`. `Qwen/Qwen2.5-14B` is the default.
 - `model_port`: The port number for the model server. Default is `8000`.
 - `model_ip`: The IP address of the model server. Default is `localhost`.
 - `model_temperature`: The temperature for the model. Default is `1.0`.
 - `is_local_client`: Whether to use a local client for the model. Default is `1` (True). `0` for OpenAI API.
 
 Dataset Parameters
-- `dataset_name`: The name of the dataset to use. Options: `logistic_regression`, `moons_1`, `moons_2`, `spirals`, `linear_regression` `gaps`. Default is `logistic_regression`.
+- `dataset_name`: The name of the dataset to use. Options: `logistic_regression`, `moons_1`, `moons_2`, `spirals`, `linear_regression` `gaps`. Default is `logistic_regression` for `toy_classification.py` and `linear_regression` for `toy_regression.py`.
 - `D_size`: The size of the dataset D. Default is `15`.
 
 X Parameters
@@ -90,20 +94,22 @@ Z Parameters
 - `num_z`: The number of auxiliary z values to use. Default is `15`.
 - `perturb_about_x`: If `1`, the z values are perturbed about the x values. If `0`, the z values are perturbed about the mean of the ICL data. Default is `1`.
 - `perturbation_std`: The amount by which the standard deviation of the Gaussian perturbations (for generating the z values) is scaled. Default is `0.1`.
-- `num_bo_z`: The number of z values to use for Bayesian Optimization. If `0`, no Bayesian Optimization is performed. Default is `0`.
+- `num_bo_z`: The number of z values to use for Bayesian Optimization. The first `num_z` - `num_bo_z` z values are randomly sampled. If `0`, no Bayesian Optimization is performed. Default is `0`.
 - `num_candidates`: The number of candidates to generate for Bayesian Optimization. Default is `3`.
 
 Other parameters
 - `run_name`: The name of the run. Default is `test`.
-- `save_directory`: The sub-directory within `/results` to save the results in. Default is `other`.
+- `save_directory`: The sub-directory within `/results/toy_classification` or `/results/toy_regression` (respectively) to save the results in. Default is `other`.
 - `verbose_output`: If `1`, verbose output is printed. Default is `0`.
 
 ### Bandits
 
-Scripts:
+Example Scripts:
 
 ```
 python run_bandit_classification.py
+
+python run_bandit_classification.py --model_temperature 2.0 --bandit_num_arms 10 --bandit_midpoint 0.6 --bandit_gap 0.1 --bandit_exploration_rate 1.0 --num_trials 100 --num_random_trials 10 --uncertainty_type total --run_name buttons_midpoint_0.6_gap_0.1 --save_directory 10_arm_bandit
 ```
 
 Parameters:
@@ -145,7 +151,7 @@ Z Parameters
 
 Other parameters
 - `run_name`: The name of the run. Default is `test`.
-- `save_directory`: The sub-directory within `/results` to save the results in. Default is `other`.
+- `save_directory`: The sub-directory within `/results/bandits` to save the results in. Default is `other`.
 - `verbose_output`: If `1`, verbose output is printed. Default is `0`.
 
 

@@ -391,7 +391,7 @@ class ToyClassificationExperiment:
     def run_experiment_default(self):
         for x_idx in range(self.num_x_values):
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(f"results/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
+            save_df.to_csv(f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
     
     def run_experiment(self):
         self.run_experiment_default()

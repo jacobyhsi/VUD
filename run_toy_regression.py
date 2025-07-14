@@ -25,7 +25,7 @@ parser.add_argument("--model_temperature", default=1, type=float)
 parser.add_argument("--is_local_client", default=1, type=int)
 
 """Dataset Configuration"""
-parser.add_argument("--dataset_name", default="linear_regression_1", type=str)
+parser.add_argument("--dataset_name", default="linear_regression", type=str)
 parser.add_argument("--D_size", default=3, type=int)
 
 """X Configuration"""
@@ -389,7 +389,7 @@ class ToyRegressionExperiment:
     def run_experiment(self):
         for x_idx in range(self.num_x_values):
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(f"results/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
+            save_df.to_csv(f"results/toy_regression/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
         
 def main():
     config = ToyRegressionExperimentConfig(**vars(args))
