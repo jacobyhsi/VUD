@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 from src.dataset import QADataset
 from src.prompt import Prompt
-from src.chat import chat_tabular
+from src.chat import chat_qa
 from src.utils import calculate_entropy
 
 # OOD Benchmark for Question Answering (QA) tasks using Deep Ensembles
