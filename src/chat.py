@@ -93,25 +93,38 @@ def chat_response_only(message: str, seed: int, max_tokens: int=10, temperature:
     return text_output
 
 ### QA ###
-def chat_perturb(message: str, seed: int, max_tokens: int=512, model: str="Qwen/Qwen2.5-14B-Instruct"):
-    url = "http://localhost:8000/v1/completions"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "model": model,
-        "prompt": message,
-        "temperature": 1.0,
-        "max_tokens": max_tokens,
-        "logprobs": 10,
-        "seed": seed
-    }
+from openai import OpenAI
+import os
 
-    response = requests.post(url, headers=headers, json=data).json()
-    text_output = response["choices"][0]["text"]
-    
+def chat_perturb(
+    message: str,
+    seed: int,
+    max_tokens: int = 512,
+    model: str = "Qwen/Qwen3-14B",
+    port: str = "8001",
+    ip: str = "146.169.1.69",
+):
+    client = OpenAI(
+        api_key="dummy-key",
+        base_url=f"http://{ip}:{port}/v1",
+    )
+
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": "/no_think You are a helpful assistant."},
+            {"role": "user", "content": message},
+        ],
+        temperature=1.0,
+        max_tokens=max_tokens,
+        seed=seed,
+    )
+
+    text_output = completion.choices[0].message.content
     return text_output
 
-def chat_qa(message: str, label_keys, seed: int, model: str="Qwen/Qwen2.5-14B-Instruct"):
-    url = "http://localhost:8000/v1/completions"
+def chat_qa(message: str, label_keys, seed: int, model: str="Qwen/Qwen2.5-14B-Instruct", port: str="6000", ip: str="146.169.1.212"):
+    url = f"http://{ip}:{port}/v1/completions"
     headers = {"Content-Type": "application/json"}
     data = {
         "model": model,

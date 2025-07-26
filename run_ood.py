@@ -1,6 +1,7 @@
 import re
 import argparse
 import pandas as pd
+import os
 from tqdm import tqdm
 from src.dataset import QADataset
 from src.prompt import Prompt
@@ -39,7 +40,7 @@ def main():
 
     prompt = Prompt(prompt_type="qa")
 
-    print(f"Processing: df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL_new-z-prompt_bug-amend_instruct_dualgpu.csv")
+    print(f"Processing: df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL.csv")
     results = []
     for i, x_row in tqdm(data_x.iterrows(), total=num_x, desc="Processing x"):
         x = x_row['note']
@@ -47,7 +48,7 @@ def main():
         min_Va_lst = []
         seed = 0
 
-        data_z = QAUtils.perturb_z(data=df_D, x_row=x_row, z_samples=num_z, seed=seed)
+        data_z = QAUtils.perturb_z(data=df_D, x_row=x_row, z_samples=num_z, seed=seed, dataname=args.id)
         data_z["puzD"] = None
         data_z["pyxuzD"] = None
 
@@ -215,14 +216,16 @@ def main():
         results.append(x_z)
 
         df_results = pd.concat(results, ignore_index=True)
-        df_results.to_csv(f"results_qa/df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL.csv", index=False)
+        
+        os.makedirs("results/qa", exist_ok=True)
+        df_results.to_csv(f"results/qa/df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL.csv", index=False)
 
 if __name__ == "__main__":
     # Argument Parser
     pd.set_option('display.max_columns', None)
     parser = argparse.ArgumentParser(description='Run VPUD')
     parser.add_argument("--seed", default=123)
-    parser.add_argument("--id", default="boolqa")
+    parser.add_argument("--id", default="mmlu")
     parser.add_argument("--ood", default="pubmedqa")
     parser.add_argument("--num_seeds", default=5)
     args = parser.parse_args()

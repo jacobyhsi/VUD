@@ -10,7 +10,7 @@ from src.utils import calculate_entropy
 # OOD Benchmark for Question Answering (QA) tasks using Deep Ensembles
 
 def sample_in_context_set(df_train: pd.DataFrame, num_d: int, seed: int) -> str:
-    """Return a single string containing `num_d` randomly‑sampled in‑context rows.
+    """Return a single string containing `num_d` randomly-sampled in-context rows.
 
     The returned string is suitable for Prompt.get_pyxD_prompt().
     """
@@ -43,7 +43,7 @@ def main():
     # test_df = pd.concat([test_id, test_ood], ignore_index=True).head(120)
     # test_df = test_df.sample(n=25, random_state=global_seed).reset_index(drop=True)
 
-    prompt_builder = Prompt(prompt_type="tabular")
+    prompt_builder = Prompt(prompt_type="qa")
 
     results = []
     for idx, x_row in tqdm(test_df.iterrows(), total=len(test_df), desc="Processing test examples"):

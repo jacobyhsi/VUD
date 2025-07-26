@@ -194,3 +194,6 @@ cython_debug/
 .cursorindexingignore
 
 run_llm.sh
+
+# csv files
+*.csv

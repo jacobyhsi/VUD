@@ -294,6 +294,7 @@ class QAUtils:
         x_row: pd.Series,
         z_samples: int,
         seed: int,
+        dataname: str,
         max_tokens: int = 512,
     ) -> pd.DataFrame:
         replace_flag = z_samples > len(data)
@@ -302,14 +303,24 @@ class QAUtils:
         perturbed_rows = []
         for idx, z_row in tqdm(z_base.iterrows(), total=len(z_base), desc="Processing z perturbations"):
 
-            prompt = (
-                "Please rephrase the following:\n\n"
-                f"{z_row['note']}\n\n"
-                "While rephrasing the above, incorporate context from the following and make sure its intertwined/interconnected:\n\n"
-                f"{x_row['note']}\n\n"
-                "Use the following format when rephrasing:\n\n"
-                "<rep> Question: {Rephrased Question}? Context: {Rephrased Context}. </rep>"
-            )
+            if dataname == "mmlu":
+                prompt = (
+                    "/nothink Please rephrase the following:\n\n"
+                    f"{z_row['note']}\n\n"
+                    "While rephrasing the above, you must incorporate context from the following and make sure its intertwined/interconnected:\n\n"
+                    f"{x_row['note']}\n\n"
+                    "Use the following format when rephrasing:\n\n"
+                    "<rep> Question:... Choices... </rep>"
+                )
+            else:
+                prompt = (
+                    "Please rephrase the following:\n\n"
+                    f"{z_row['note']}\n\n"
+                    "While rephrasing the above, incorporate context from the following and make sure its intertwined/interconnected:\n\n"
+                    f"{x_row['note']}\n\n"
+                    "Use the following format when rephrasing:\n\n"
+                    "<rep> Question: {Rephrased Question}? Context: {Rephrased Context}. </rep>"
+                )
 
             MAX_RETRIES = 3
             note = z_row["note"].lower()  # fallback

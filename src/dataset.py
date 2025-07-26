@@ -87,6 +87,8 @@ class QADataset:
             train_id, test_id = self._load_hotpotqa()
         elif self.id_dataset == "pubmedqa":
             train_id, test_id = self._load_pubmedqa()
+        elif self.id_dataset == "mmlu":
+            train_id, test_id = self._load_mmlu()
         else:
             raise ValueError(f"Unknown ID dataset: {self.id_dataset}")
 
@@ -97,6 +99,8 @@ class QADataset:
             _, test_ood = self._load_hotpotqa()
         elif self.ood_dataset == "pubmedqa":
             _, test_ood = self._load_pubmedqa()
+        elif self.ood_dataset == "mmlu":
+            _, test_ood = self._load_mmlu()
         else:
             raise ValueError(f"Unknown OOD dataset: {self.ood_dataset}")
 
@@ -104,6 +108,41 @@ class QADataset:
         label_keys = [str(k) for k in sorted(train_id['label'].unique().tolist())]
 
         return train_id.reset_index(drop=True), test_id.reset_index(drop=True), test_ood.reset_index(drop=True), label_keys
+
+    def _load_mmlu(self):
+        # Load MMLU dataset
+        ds = load("cais/mmlu", "all")  # or specify a subject
+        
+        # Use validation and test splits
+        df_val = pd.DataFrame(ds["validation"])
+        df_test = pd.DataFrame(ds["test"])
+        df_all = pd.concat([df_val, df_test], ignore_index=True)
+        
+        # Sample if needed
+        df_all = df_all.sample(n=self.dataset_size, random_state=self.seed).reset_index(drop=True)
+        df_all = df_all.rename(columns={"answer": "label"})
+        
+        # Format input text
+        df_all["note"] = (
+            "Question: " + df_all["question"] + "\nChoices:\n" +
+            "0: " + df_all["choices"].str[0] + "\n" +
+            "1: " + df_all["choices"].str[1] + "\n" +
+            "2: " + df_all["choices"].str[2] + "\n" +
+            "3: " + df_all["choices"].str[3]
+        )
+        
+        # Keep only note and answer
+        df_all = df_all[["note", "label"]]
+        
+        # Split into train/test (stratify by answer)
+        train_df, test_df = train_test_split(
+            df_all,
+            test_size=self.test_size,
+            random_state=self.seed,
+            stratify=df_all["label"],
+        )
+        
+        return train_df.reset_index(drop=True), test_df.reset_index(drop=True)
 
     def _load_boolqa(self):
         ds = load("boolq")                          
