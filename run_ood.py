@@ -20,7 +20,7 @@ def main():
     print(f"Label keys: {label_keys}")
 
     # Sample D
-    num_D = 15
+    num_D = 1
     df_D = train_id.sample(n=num_D, random_state=global_seed)
     train_id = train_id.drop(df_D.index)
 
@@ -48,7 +48,7 @@ def main():
         min_Va_lst = []
         seed = 0
 
-        data_z = QAUtils.perturb_z(data=df_D, x_row=x_row, z_samples=num_z, seed=seed, dataname=args.id)
+        data_z = QAUtils.perturb_z(data=df_z, x_row=x_row, z_samples=num_z, seed=seed, dataname=args.id)
         data_z["puzD"] = None
         data_z["pyxuzD"] = None
 
@@ -225,8 +225,8 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', None)
     parser = argparse.ArgumentParser(description='Run VPUD')
     parser.add_argument("--seed", default=123)
-    parser.add_argument("--id", default="mmlu")
-    parser.add_argument("--ood", default="pubmedqa")
+    parser.add_argument("--id", default="mmlu") # boolqa, hotpotqa, pubmedqa, mmlu
+    parser.add_argument("--ood", default="boolqa") # boolqa, hotpotqa, pubmedqa, mmlu
     parser.add_argument("--num_seeds", default=5)
     args = parser.parse_args()
     main()

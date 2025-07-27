@@ -298,7 +298,7 @@ class QAUtils:
         max_tokens: int = 512,
     ) -> pd.DataFrame:
         replace_flag = z_samples > len(data)
-        z_base = data.sample(n=z_samples, replace=replace_flag, random_state=42).reset_index(drop=True)
+        z_base = data.sample(n=z_samples, replace=replace_flag, random_state=seed).reset_index(drop=True)
 
         perturbed_rows = []
         for idx, z_row in tqdm(z_base.iterrows(), total=len(z_base), desc="Processing z perturbations"):
@@ -307,7 +307,7 @@ class QAUtils:
                 prompt = (
                     "/nothink Please rephrase the following:\n\n"
                     f"{z_row['note']}\n\n"
-                    "While rephrasing the above, you must incorporate context from the following and make sure its intertwined/interconnected:\n\n"
+                    "While rephrasing the above, you must incorporate context from the following and make sure it's intertwined/interconnected:\n\n"
                     f"{x_row['note']}\n\n"
                     "Use the following format when rephrasing:\n\n"
                     "<rep> Question:... Choices... </rep>"
@@ -316,17 +316,17 @@ class QAUtils:
                 prompt = (
                     "Please rephrase the following:\n\n"
                     f"{z_row['note']}\n\n"
-                    "While rephrasing the above, incorporate context from the following and make sure its intertwined/interconnected:\n\n"
+                    "While rephrasing the above, incorporate context from the following and make sure it's intertwined/interconnected:\n\n"
                     f"{x_row['note']}\n\n"
                     "Use the following format when rephrasing:\n\n"
-                    "<rep> Question: {Rephrased Question}? Context: {Rephrased Context}. </rep>"
+                    "<rep> Question: {{Rephrased Question}}? Context: {{Rephrased Context}}. </rep>"
                 )
 
             MAX_RETRIES = 3
             note = z_row["note"].lower()  # fallback
 
             for attempt in range(MAX_RETRIES):
-                attempt_seed = seed + attempt  # increment seed only across retries
+                attempt_seed = seed + idx * MAX_RETRIES + attempt  # unique seed per z + retry
                 try:
                     response = chat_perturb(prompt, seed=attempt_seed, max_tokens=max_tokens)
                     match = re.search(r"<rep>(.*?)</rep>", response, flags=re.DOTALL | re.IGNORECASE)
@@ -335,9 +335,9 @@ class QAUtils:
                         note = match.group(1).strip().lower()
                         break  # success
                     else:
+                        print(f"[Retry {attempt+1}] <rep> tags not found. Retrying...")
                         print("Response that failed:")
                         print(response)
-                        print(f"[Retry {attempt+1}] <rep> tags not found. Retrying...")
 
                 except Exception as e:
                     print(f"[Retry {attempt+1}] chat_perturb failed: {e}")

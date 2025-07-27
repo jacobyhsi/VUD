@@ -61,7 +61,7 @@ def main():
             prompt_pyxD = prompt_builder.get_pyxD_prompt(x_note, D_str)
 
             # Query
-            output, p_yxD = chat_tabular(prompt_pyxD, label_keys, seed_k)
+            output, p_yxD = chat_qa(prompt_pyxD, label_keys, seed_k)
             # Guard‑rails: if parsing fails, resample once (optional)
             if not p_yxD:
                 continue  # skip this ensemble member
