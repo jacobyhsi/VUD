@@ -1,0 +1,8 @@
+vllm
+flashinfer-python
+accelerate
+pandas 
+datasets==2.18.0
+scikit-learn
+
+# for pubmedqa, datasets==4.0.0
