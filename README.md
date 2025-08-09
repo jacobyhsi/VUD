@@ -15,7 +15,7 @@
 
 The following delineates the installation instructions. Clone this repository and navigate to it in your terminal. Create an environment using a preferred package manager.
 
-Note: can replace `conda` with `micromamba` or `venv`.
+Note: can replace `conda` with `micromamba` or `uv`.
 
 ```
 conda create -n vud python=3.10
