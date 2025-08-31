@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<!-- <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<head>
+  <meta charset="utf-8">
+  <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
+  <!-- Replace the content tag with appropriate information -->
+  <meta name="description" content="DESCRIPTION META TAG">
+  <meta property="og:title" content="SOCIAL MEDIA TITLE TAG" />
+  <meta property="og:description" content="SOCIAL MEDIA DESCRIPTION TAG TAG" />
+  <meta property="og:url" content="URL OF THE WEBSITE" />
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
+  <meta property="og:image" content="static/image/your_banner_image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+
+  <meta name="twitter:title" content="TWITTER BANNER TITLE META TAG">
+  <meta name="twitter:description" content="TWITTER BANNER DESCRIPTION META TAG">
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
+  <meta name="twitter:image" content="static/images/your_twitter_banner_image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Keywords for your paper to be indexed by-->
+  <meta name="keywords" content="KEYWORDS SHOULD BE PLACED HERE">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <title>Variational Uncertainty Quantification</title>
+  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+</head>
+
+<body>
+
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">Variational Uncertainty Quantification</h1>
+            <div class="is-size-5 publication-authors">
+              <!-- Paper authors -->
+              <span class="author-block">
+                <a href="SECOND AUTHOR PERSONAL LINK" target="_blank">I. Shavindra Jayasekera</a><sup>*</sup>,</span>
+              <span class="author-block">
+                <a href="FIRST AUTHOR PERSONAL LINK" target="_blank">Jacob Si</a><sup>*</sup>,</span>
+              <span class="author-block">
+                <a href="THIRD AUTHOR PERSONAL LINK" target="_blank">Filippo Valdettaro</a>,</span>
+              <span class="author-block">
+                <a href="FOURTH AUTHOR PERSONAL LINK" target="_blank">Wenlong Chen</a>,</span>
+              <span class="author-block">
+                <a href="FOURTH AUTHOR PERSONAL LINK" target="_blank">A. Aldo Faisal</a>,</span>
+              <span class="author-block">
+                <a href="FIFTH AUTHOR PERSONAL LINK" target="_blank">Yingzhen Li</a></span>
+            </div>
+
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">Imperial College London<br>2025</span>
+              <span class="eql-cntrb"><small><br><sup>*</sup>Indicates Equal Contribution</small></span>
+            </div>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <!-- Arxiv PDF link -->
+                <span class="link-block">
+                  <a href="https://arxiv.org/pdf/<ARXIV PAPER ID>.pdf" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </span>
+                    <span>Paper</span>
+                  </a>
+                </span>
+
+                <!-- Supplementary PDF link -->
+                <span class="link-block">
+                  <a href="static/pdfs/supplementary_material.pdf" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </span>
+                    <span>Supplementary</span>
+                  </a>
+                </span>
+
+                <!-- Github link -->
+                <span class="link-block">
+                  <a href="https://github.com/jacobyhsi/VUD" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+
+                <!-- ArXiv abstract Link -->
+                <span class="link-block">
+                  <a href="https://arxiv.org/abs/<ARXIV PAPER ID>" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                    </span>
+                    <span>arXiv</span>
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+              As large language models (LLMs) gain popularity in conducting prediction tasks in-context,
+              understanding the sources of uncertainty in in-context learning becomes essential to ensuring reliability.
+              The recent hypothesis of in-context learning performing predictive Bayesian inference opens the avenue for
+              Bayesian uncertainty estimation, particularly for decomposing uncertainty into epistemic uncertainty due
+              to lack of in-context data and aleatoric uncertainty inherent in the in-context prediction task.
+              However, the decomposition idea remains under-explored due to the intractability of the latent parameter
+              posterior from the underlying Bayesian model. In this work, we introduce a variational uncertainty
+              decomposition framework for in-context learning without explicitly sampling from the latent parameter
+              posterior, by optimising auxiliary queries as probes to obtain an upper bound to the aleatoric uncertainty
+              of an LLM's in-context learning procedure, which also induces a lower bound to the epistemic uncertainty.
+              Through experiments on synthetic and real-world tasks, we show quantitatively and qualitatively that the
+              decomposed uncertainties obtained from our method exhibit desirable properties of epistemic and aleatoric
+              uncertainty. Code is available at: \url{https://github.com/jacobyhsi/VUD}.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<div class="columns is-centered has-text-centered my-6"> 
+    <div class="column is-two-thirds"> 
+        <img 
+            src="static/images/vud_architecture_og.png" 
+            alt="Uncertainty Decomposition Algorithm Diagram" 
+            class="image is-responsive"
+            style="max-width: 70%; border-radius: 8px; margin: 0 auto;" 
+        >
+        <p style="text-align: center; margin-top: 8px;">
+          Figure 1. A visual illustration of the structure of the Uncertainty Decomposition Algorithm. 
+        </p>
+    </div>
+</div>
+
+
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Uncertainty Visualization Demos</h2>
+        <p class="is-size-6">Figures showing the decomposition of total uncertainty into aleatoric and epistemic components.
+          These diagrams present the uncertainty breakdown in classification tasks when the in-context learning (ICL) dataset size is 15.
+
+          Blue scatter points stand for total uncertainty, and their fitted blue curve depicts the overall uncertainty distribution and trend. 
+          Pink scatter points represent aleatoric uncertainty, with the fitted pink curve showing its specific pattern. 
+          The difference between the blue curve and the pink curve indicates the epistemic uncertainty.
+          Green dashed lines in the background mark ICL examples with label y = 0, while gray dashed lines indicate those with label y = 1. 
+          Notice how uncertainty changes in dense and sparse regions.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 1st GIF -->
+<div class="columns is-centered has-text-centered"> 
+  <div class="column is-one-third"> 
+    <img 
+      src="static/gif/logistic.gif"
+      alt="Aleatoric & Epistemic Decomposition" 
+      class="image is-responsive"
+      style="max-width: 100%; border-radius: 8px;" 
+    >
+    <p style="text-align: center; margin-top: 8px;"> 
+      Figure 2. Uncertainty Decomposition Algorithm on Logistic Regression Dataset. 
+    </p>
+  </div>
+</div>
+
+<!-- 2nd GIF -->
+<div class="columns is-centered has-text-centered mb-4", style="margin-top: 30px"> 
+  <div class="column is-one-third"> 
+    <img 
+      src="static/gif/interval.gif"
+      alt="Total Uncertainty Visualization" 
+      class="image is-responsive"
+      style="max-width: 100%; border-radius: 8px;" 
+    >
+    <p style="text-align: center; margin-top: 8px;"> 
+      Figure 3. Uncertainty Decomposition Algorithm on Uniform Interval Dataset. 
+    </p>
+  </div>
+</div>
+
+<!-- 3rd GIF -->
+<div class="columns is-centered has-text-centered"> 
+  <div class="column is-one-third"> 
+    <img 
+      src="static/gif/altering_icl.gif"
+      alt="Decomposition while Adding ICL Points" 
+      class="image is-responsive"
+      style="max-width: 100%; border-radius: 8px;" 
+    >
+    <p style="text-align: center; margin-top: 8px;"> 
+      Figure 4. Uncertainty Decomposition Algorithm on Logistic Regression Dataset with Increasing ICL Examples.
+    </p>
+  </div>
+</div>
+
+<!-- For debug purpose -->
+<div id="point-info" class="content" style="margin-top: 1rem; font-size: 0.95rem;"></div>
+
+<section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+        <div id="results-carousel" class="carousel results-carousel">
+          <div class="item">
+            <!-- Your image here -->
+            <img src="static/images/moon_total.png" alt="MY ALT TEXT" style="margin: 0 auto; display: block;" />
+            <h2 class="subtitle has-text-centered">
+              Total uncertainty for 2-d moons dataset.
+            </h2>
+          </div>
+          <div class="item">
+            <!-- Your image here -->
+            <img src="static/images/moon_alea.png" alt="MY ALT TEXT" style="margin: 0 auto; display: block;" />
+            <h2 class="subtitle has-text-centered">
+              Aleatoric uncertainty for 2-d moons dataset.
+            </h2>
+          </div>
+          <div class="item">
+            <!-- Your image here -->
+            <img src="static/images/moon_epi.png" alt="MY ALT TEXT" style="margin: 0 auto; display: block;" />
+            <h2 class="subtitle has-text-centered">
+              Epistemic uncertainty for 2-d moons dataset.
+            </h2>
+          </div>
+          <div class="item">
+            <!-- Your image here -->
+            <img src="static/images/spiral_total.png" alt="MY ALT TEXT" style="margin: 0 auto; display: block;" />
+            <h2 class="subtitle has-text-centered">
+              Total uncertainty for 2-d spiral dataset.
+            </h2>
+          </div>
+          <div class="item">
+            <!-- Your image here -->
+            <img src="static/images/spiral_alea.png" alt="MY ALT TEXT" style="margin: 0 auto; display: block;" />
+            <h2 class="subtitle has-text-centered">
+              Aleatoric uncertainty for 2-d spiral dataset.
+            </h2>
+          </div>
+          <div class="item">
+            <!-- Your image here -->
+            <img src="static/images/spiral_epi.png" alt="MY ALT TEXT" style="margin: 0 auto; display: block;" />
+            <h2 class="subtitle has-text-centered">
+              Epistemic uncertainty for 2-d spiral dataset.
+            </h2>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Paper poster -->
+  <section class="hero is-small is-light">
+    <div class="hero-body">
+      <div class="container">
+        <!-- <h2 class="title">Poster</h2> -->
+
+        <iframe src="static/pdfs/NeurIPS__VUD.pdf" width="100%" height="550">
+        </iframe>
+
+      </div>
+    </div>
+  </section>
+  <!--End paper poster -->
+
+
+  <!--BibTex citation -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script>
+      <p>If you would like to cite this paper, please copy the following BibTeX entry into your reference management tool:</p>
+      <pre><code class="language-bibtex">
+        @preprint{jayasekera2023clever,
+          title={Clever Queries Clarify Beliefs: Variational Uncertainty Decomposition for In-Context Learning},
+          author={Jayasekera, I. Shavindra and Si, Jacob and Valdettaro, Filippo and Chen, Wenlong and Faisal, A. Aldo and Li, Yingzhen},
+          institution={Imperial College London},
+          email={i.jayasekera23@imperial.ac.uk, y.si23@imperial.ac.uk, yingzhen.li@imperial.ac.uk},
+          year={2025},
+          note={Preprint. Under review.},
+          url={https://github.com/jacobyhsi/VUD}
+        }
+      </code></pre>
+    </div>
+  </section>
+  <!--End BibTex citation -->
+
+
+  <footer class="footer">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+
+            <p>
+              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template"
+                target="_blank">Academic Project Page Template</a> which was adopted from the <a
+                href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+              You are free to borrow the source code of this website, we just ask that you link back to this page in the
+              footer. <br> This website is licensed under a <a rel="license"
+                href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+                Commons Attribution-ShareAlike 4.0 International License</a>.
+            </p>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Statcounter tracking code -->
+
+  <!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
+
+  <!-- End of Statcounter Code -->
+
+</body>
+
+</html>
