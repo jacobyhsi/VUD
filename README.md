@@ -192,3 +192,15 @@ python eval_ood.py
 ## Citation
 
 Please consider citing our paper if you find it helpful. Thank you :grinning:!
+
+```
+@misc{jayasekera2025variationaluncertaintydecompositionincontext,
+      title={Variational Uncertainty Decomposition for In-Context Learning}, 
+      author={I. Shavindra Jayasekera and Jacob Si and Filippo Valdettaro and Wenlong Chen and A. Aldo Faisal and Yingzhen Li},
+      year={2025},
+      eprint={2509.02327},
+      archivePrefix={arXiv},
+      primaryClass={stat.ML},
+      url={https://arxiv.org/abs/2509.02327}, 
+}
+```
