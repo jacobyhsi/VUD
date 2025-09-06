@@ -26,7 +26,7 @@ parser.add_argument("--is_local_client", default=1, type=int)
 
 """Dataset Configuration"""
 parser.add_argument("--dataset_name", default="linear_regression", type=str)
-parser.add_argument("--D_size", default=3, type=int)
+parser.add_argument("--D_size", default=15, type=int)
 
 """X Configuration"""
 parser.add_argument("--x_row_method", type=str, default="x_range")
