@@ -32,7 +32,7 @@ parser.add_argument("--D_size", default=15, type=int)
 parser.add_argument("--x_row_method", type=str, default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
-parser.add_argument("--x_range", default="{'x1': [-12, 12, 0.2]}")
+parser.add_argument("--x_range", default="{'x1': [-15, 15, 0.2]}")
 parser.add_argument("--decimal_places", default=1, type=int)
 
 """Permutation Related Configuration"""
@@ -46,11 +46,11 @@ parser.add_argument("--icl_sample_seed", default=0, type=int)
 parser.add_argument("--fixed_permutation_seed", default=0, type=int)
 
 """Z Configuration"""
-parser.add_argument("--num_z", default=15, type=int)
+parser.add_argument("--num_z", default=5, type=int)
 parser.add_argument("--perturb_about_x", default=1, type=int)
 parser.add_argument("--perturbation_std", default=0.1, type=float)
-parser.add_argument("--num_bo_z", default=0, type=int)
-parser.add_argument("--num_candidates", default=3, type=int)
+parser.add_argument("--num_bo_z", default=0, type=int) # Bayesian Optimisation Params
+parser.add_argument("--num_candidates", default=3, type=int) # Bayesian Optimisation Params
 
 """Distribution Approximation Configuration"""
 parser.add_argument("--num_outlier_pairs_to_remove", default=0, type=int)
