@@ -47,13 +47,9 @@ Then in a different terminal, run the desired experiments.
 Example Scripts:
 
 ```
-python run_toy_classification.py
+python run_toy_classification.py --dataset_name [NAME_OF_DATASET]
 
-python run_toy_classification.py --model_name meta-llama/Meta-Llama-3-8B --dataset_name moons_1 --D_size 30 --x_range "{'x1': [-3.0, 3.0, 0.2], 'x2': [-3.0, 3.0, 0.2]}" --decimal_places 2 --num_z 10 --save_directory "example" --run_name "30_ICL_10_Z"
-
-python run_toy_regression.py
-
-python run_toy_regression.py --model_name Qwen/Qwen2.5-7B --D_size 20 --x_features "{'x1': [-1.2, 0.4, 1.5, 2.9, 3.4]}" --perturbation_std 1.0 --num_z 20 --num_bo_z 10
+python run_toy_regression.py --dataset_name [NAME_OF_DATASET]
 ```
 
 Parameters:
