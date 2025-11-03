@@ -1,7 +1,20 @@
 # Variational Uncertainty Decomposition for In-Context Learning
-[I. Shavindra Jayasekera](http://yingzhenli.net/home/en/?page_id=1411)\*, [Jacob Si](https://jacobyhsi.github.io/)\*, [Filippo Valdettaro](https://faisallab.org/members/filippo-valdettaro), [Wenlong Chen](https://chenw20.github.io/wenlongchen.github.io//), [Aldo Faisal](https://faisallab.org/members/aldo-faisal), and [Yingzhen Li](http://yingzhenli.net/home/en/).
 
-Imperial College London.
+<div>
+    <a href="http://yingzhenli.net/home/en/?page_id=1411" target="_blank">I. Shavindra Jayasekera</a><sup>*</sup> | 
+    <a href="https://jacobyhsi.github.io/" target="_blank">Jacob Si</a><sup>*</sup> | 
+    <a href="https://faisallab.org/members/filippo-valdettaro" target="_blank">Filippo Valdettaro</a> | 
+    <a href="https://chenw20.github.io/wenlongchen.github.io//" target="_blank">Wenlong Chen</a> | 
+    <a href="https://faisallab.org/members/aldo-faisal" target="_blank">Aldo Faisal</a> |
+    <a href="http://yingzhenli.net/home/en/" target="_blank">Yingzhen Li</a>
+</div>
+<br>
+<div>
+    Imperial College London
+</div>
+<br>
+
+
 
 <p align="center">
 <a href="https://arxiv.org/abs/2509.02327"><img src="https://img.shields.io/badge/arXiv-2505.18495-b31b1b.svg?logo=arxiv&logoColor=red" alt="VUD on arXiv"/></a>
