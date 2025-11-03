@@ -1,5 +1,5 @@
 # Variational Uncertainty Decomposition for In-Context Learning
-
+<div align="center">
 <div>
     <a href="http://yingzhenli.net/home/en/?page_id=1411" target="_blank">I. Shavindra Jayasekera</a><sup>*</sup> | 
     <a href="https://jacobyhsi.github.io/" target="_blank">Jacob Si</a><sup>*</sup> | 
@@ -13,8 +13,7 @@
     Imperial College London
 </div>
 <br>
-
-
+</div>
 
 <p align="center">
 <a href="https://arxiv.org/abs/2509.02327"><img src="https://img.shields.io/badge/arXiv-2505.18495-b31b1b.svg?logo=arxiv&logoColor=red" alt="VUD on arXiv"/></a>
