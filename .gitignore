@@ -197,3 +197,7 @@ run_llm.sh
 
 # csv files
 *.csv
+
+slurm.sh
+
+results/

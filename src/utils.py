@@ -12,10 +12,12 @@ from tqdm import tqdm
 # Helper Functions
 
 def calculate_entropy(probs: dict):
-    # Calculate entropy using all probabilities in the dictionary
-    probs_array = np.array(list(probs.values()))
-    entropy = -np.sum(probs_array * np.log2(probs_array))
-    return round(entropy, 5)
+    probs_array = np.asarray(list(probs.values()), dtype=float)
+    if np.any(probs_array < 0):
+        raise ValueError("Probabilities must be non-negative.")
+    positive_probs = probs_array[probs_array > 0]
+    entropy = -np.sum(positive_probs * np.log2(positive_probs))
+    return round(float(entropy), 5)
 
 def calculate_discrete_mean(probs: dict):
     # Calculate mean
@@ -296,6 +298,9 @@ class QAUtils:
         seed: int,
         dataname: str,
         max_tokens: int = 512,
+        model: str = "Qwen/Qwen2.5-14B",
+        host: str = "localhost",
+        port: int = 8000,
     ) -> pd.DataFrame:
         replace_flag = z_samples > len(data)
         z_base = data.sample(n=z_samples, replace=replace_flag, random_state=seed).reset_index(drop=True)
@@ -328,7 +333,14 @@ class QAUtils:
             for attempt in range(MAX_RETRIES):
                 attempt_seed = seed + idx * MAX_RETRIES + attempt  # unique seed per z + retry
                 try:
-                    response = chat_perturb(prompt, seed=attempt_seed, max_tokens=max_tokens)
+                    response = chat_perturb(
+                        prompt,
+                        seed=attempt_seed,
+                        max_tokens=max_tokens,
+                        model=model,
+                        ip=host,
+                        port=port,
+                    )
                     match = re.search(r"<rep>(.*?)</rep>", response, flags=re.DOTALL | re.IGNORECASE)
 
                     if match:

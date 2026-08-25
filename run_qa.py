@@ -10,17 +10,22 @@ from src.utils import calculate_entropy, calculate_kl_divergence, QAUtils
 
 # Main
 def main():
-    global_seed = int(args.seed)
-    qa = QADataset(args.id, args.ood)
-    train_id, test_id, test_ood, label_keys = qa.load_data()
+    global_seed = args.seed
+    qa = QADataset(args.id, args.ood, seed=global_seed)
+    if args.ood is None:
+        train_id, test_id, label_keys = qa.load_id_data()
+        test_ood = None
+    else:
+        train_id, test_id, test_ood, label_keys = qa.load_data()
 
     print(f"Train shape: {train_id.shape}")
     print(f"Test (ID) shape: {test_id.shape}")
-    print(f"Test (OOD) shape: {test_ood.shape}")
+    if test_ood is not None:
+        print(f"Test (OOD) shape: {test_ood.shape}")
     print(f"Label keys: {label_keys}")
 
     # Sample D
-    num_D = 1
+    num_D = 15
     df_D = train_id.sample(n=num_D, random_state=global_seed)
     train_id = train_id.drop(df_D.index)
 
@@ -29,26 +34,76 @@ def main():
     df_z = train_id.sample(n=1, random_state=global_seed)
     train_id = train_id.drop(df_z.index)
     
-    # Sample x
+    # Sample x. Omitting --ood evaluates the complete ID test set.
+    test_id = test_id.copy()
     test_id["is_ood"] = 0
-    test_ood["is_ood"] = 1
+    if test_ood is None:
+        data_x = test_id.reset_index(drop=True)
+    else:
+        test_ood = test_ood.copy()
+        test_ood["is_ood"] = 1
 
-    # Interleave rows
-    interleaved_rows = [row for pair in zip(test_id.iterrows(), test_ood.iterrows()) for row in pair]
-    data_x = pd.DataFrame([row[1] for row in interleaved_rows])
+        # Interleave rows
+        interleaved_rows = [row for pair in zip(test_id.iterrows(), test_ood.iterrows()) for row in pair]
+        data_x = pd.DataFrame([row[1] for row in interleaved_rows]).reset_index(drop=True)
     num_x = len(data_x)
 
     prompt = Prompt(prompt_type="qa")
 
-    print(f"Processing: df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL.csv")
+    output_dir = f"results/qa/{args.model.rsplit('/', 1)[-1]}"
+    if args.ood is None:
+        output_path = f"{output_dir}/df_{args.id}_ID_{num_x}x_{num_z}z_{num_D}ICL.csv"
+    else:
+        output_path = f"{output_dir}/df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL.csv"
+    print(f"Processing: {os.path.basename(output_path)}")
     results = []
-    for i, x_row in tqdm(data_x.iterrows(), total=num_x, desc="Processing x"):
+    start_index = 0
+    if args.resume and os.path.exists(output_path):
+        existing_results = pd.read_csv(output_path)
+        invalid_rows = existing_results[["TU", "Va", "Ve"]].isna().any(axis=1)
+        if invalid_rows.any():
+            first_invalid = invalid_rows[invalid_rows].index[0]
+            print(
+                f"Discarding saved rows from index {first_invalid} "
+                "because uncertainty values are invalid."
+            )
+            existing_results = existing_results.iloc[:first_invalid].copy()
+        if len(existing_results) > num_x:
+            raise ValueError(
+                f"Checkpoint has {len(existing_results)} rows, expected at most {num_x}."
+            )
+        expected_notes = data_x["note"].iloc[:len(existing_results)].reset_index(drop=True)
+        saved_notes = existing_results["x_note"].reset_index(drop=True)
+        if not saved_notes.equals(expected_notes):
+            raise ValueError(
+                "Checkpoint rows do not match this dataset ordering; refusing to resume."
+            )
+        start_index = len(existing_results)
+        results = [existing_results]
+        print(f"Resuming from row {start_index}/{num_x}.")
+
+    remaining_x = data_x.iloc[start_index:]
+    for i, x_row in tqdm(
+        remaining_x.iterrows(),
+        total=num_x,
+        initial=start_index,
+        desc="Processing x",
+    ):
         x = x_row['note']
 
         min_Va_lst = []
         seed = 0
 
-        data_z = QAUtils.perturb_z(data=df_z, x_row=x_row, z_samples=num_z, seed=seed, dataname=args.id)
+        data_z = QAUtils.perturb_z(
+            data=df_z,
+            x_row=x_row,
+            z_samples=num_z,
+            seed=seed,
+            dataname=args.id,
+            model=args.model,
+            host=args.host,
+            port=args.port,
+        )
         data_z["puzD"] = None
         data_z["pyxuzD"] = None
 
@@ -82,7 +137,14 @@ def main():
                 
                 # p(u|z,D)
                 prompt_puzD = prompt.get_puzD_prompt(z, D)
-                output_puzD, puzD = chat_qa(prompt_puzD, label_keys, seed)
+                output_puzD, puzD = chat_qa(
+                    prompt_puzD,
+                    label_keys,
+                    seed,
+                    model=args.model,
+                    port=args.port,
+                    ip=args.host,
+                )
                 if not re.search(r'\d+</output>', output_puzD):
                     seed += 1
                     continue
@@ -113,7 +175,14 @@ def main():
                 for key, icl in prompt_uzD.items():
                     u_value = re.search(r"u(\d+)", key).group(1)  # Match 'u' followed by digits
                     prompt_pyxuzD = prompt.get_pyxuzD_prompt(x, icl)
-                    output_pyxuzD, pyxuzD = chat_qa(prompt_pyxuzD, label_keys, seed)
+                    output_pyxuzD, pyxuzD = chat_qa(
+                        prompt_pyxuzD,
+                        label_keys,
+                        seed,
+                        model=args.model,
+                        port=args.port,
+                        ip=args.host,
+                    )
                     if not re.search(r'\d+</output>', output_pyxuzD):
                         skip_seed = True
                         break
@@ -128,7 +197,14 @@ def main():
 
                 # p(y|x,D)
                 prompt_pyxD = prompt.get_pyxD_prompt(x, D)
-                output_pyxD, pyxD = chat_qa(prompt_pyxD, label_keys, seed)
+                output_pyxD, pyxD = chat_qa(
+                    prompt_pyxD,
+                    label_keys,
+                    seed,
+                    model=args.model,
+                    port=args.port,
+                    ip=args.host,
+                )
                 if not re.search(r'\d+</output>', output_pyxD):
                     seed += 1
                     continue
@@ -217,16 +293,26 @@ def main():
 
         df_results = pd.concat(results, ignore_index=True)
         
-        os.makedirs("results/qa", exist_ok=True)
-        df_results.to_csv(f"results/qa/df_{args.id}_ID_{args.ood}_OOD_{num_x}x_{num_z}z_{num_D}ICL.csv", index=False)
+        os.makedirs(output_dir, exist_ok=True)
+        df_results.to_csv(output_path, index=False)
 
 if __name__ == "__main__":
     # Argument Parser
     pd.set_option('display.max_columns', None)
-    parser = argparse.ArgumentParser(description='Run VPUD')
-    parser.add_argument("--seed", default=123)
-    parser.add_argument("--id", default="mmlu") # boolqa, hotpotqa, pubmedqa, mmlu
-    parser.add_argument("--ood", default="boolqa") # boolqa, hotpotqa, pubmedqa, mmlu
-    parser.add_argument("--num_seeds", default=5)
+    parser = argparse.ArgumentParser(description='Run VUD')
+    parser.add_argument("--seed", type=int, default=123)
+    dataset_choices = ["boolqa", "hotpotqa", "pubmedqa", "mmlu", "mmlu_cs", "mmlu_moral"]
+    parser.add_argument("--id", choices=dataset_choices, default="mmlu")
+    parser.add_argument(
+        "--ood",
+        choices=dataset_choices,
+        default=None,
+        help="Optional OOD dataset. If omitted, evaluate only the complete ID test set.",
+    )
+    parser.add_argument("--num_seeds", type=int, default=5)
+    parser.add_argument("--model", default="Qwen/Qwen2.5-14B")
+    parser.add_argument("--host", default="localhost")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--resume", action="store_true", help="Resume from the existing result CSV and discard invalid trailing rows.")
     args = parser.parse_args()
     main()

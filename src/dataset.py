@@ -72,6 +72,17 @@ class ToyRegressionDataset(Dataset):
         return data  
      
 class QADataset:
+    MMLU_SUBSETS = {
+        "mmlu": ["all"],
+        "mmlu_cs": [
+            "college_computer_science",
+            "computer_security",
+            "high_school_computer_science",
+            "machine_learning",
+        ],
+        "mmlu_moral": ["moral_disputes", "moral_scenarios"],
+    }
+
     def __init__(self, id_dataset, ood_dataset, dataset_size:int = 150, test_size:float = 0.8, seed: int = 123):
         self.id_dataset = id_dataset
         self.ood_dataset = ood_dataset
@@ -79,18 +90,28 @@ class QADataset:
         self.test_size = test_size
         self.seed = seed
 
-    def load_data(self):
-        # Load ID dataset
+    def load_id_data(self):
+        """Load only the in-distribution train/test splits."""
         if self.id_dataset == "boolqa":
             train_id, test_id = self._load_boolqa()
         elif self.id_dataset == "hotpotqa":
             train_id, test_id = self._load_hotpotqa()
         elif self.id_dataset == "pubmedqa":
             train_id, test_id = self._load_pubmedqa()
-        elif self.id_dataset == "mmlu":
-            train_id, test_id = self._load_mmlu()
+        elif self.id_dataset in self.MMLU_SUBSETS:
+            train_id, test_id = self._load_mmlu(self.id_dataset)
         else:
             raise ValueError(f"Unknown ID dataset: {self.id_dataset}")
+
+        label_keys = [str(k) for k in sorted(train_id['label'].unique().tolist())]
+        return (
+            train_id.reset_index(drop=True),
+            test_id.reset_index(drop=True),
+            label_keys,
+        )
+
+    def load_data(self):
+        train_id, test_id, label_keys = self.load_id_data()
 
         # Load OOD dataset (only test portion needed)
         if self.ood_dataset == "boolqa":
@@ -99,24 +120,27 @@ class QADataset:
             _, test_ood = self._load_hotpotqa()
         elif self.ood_dataset == "pubmedqa":
             _, test_ood = self._load_pubmedqa()
-        elif self.ood_dataset == "mmlu":
-            _, test_ood = self._load_mmlu()
+        elif self.ood_dataset in self.MMLU_SUBSETS:
+            _, test_ood = self._load_mmlu(self.ood_dataset)
         else:
             raise ValueError(f"Unknown OOD dataset: {self.ood_dataset}")
 
-        # Convert label keys to strings from ID training set
-        label_keys = [str(k) for k in sorted(train_id['label'].unique().tolist())]
+        return train_id, test_id, test_ood.reset_index(drop=True), label_keys
 
-        return train_id.reset_index(drop=True), test_id.reset_index(drop=True), test_ood.reset_index(drop=True), label_keys
+    def _load_mmlu(self, subset: str = "mmlu"):
+        """Load an MMLU subject group using validation and test examples."""
+        try:
+            subjects = self.MMLU_SUBSETS[subset]
+        except KeyError as error:
+            raise ValueError(f"Unknown MMLU subset: {subset}") from error
 
-    def _load_mmlu(self):
-        # Load MMLU dataset
-        ds = load("cais/mmlu", "all")  # or specify a subject
-        
-        # Use validation and test splits
-        df_val = pd.DataFrame(ds["validation"])
-        df_test = pd.DataFrame(ds["test"])
-        df_all = pd.concat([df_val, df_test], ignore_index=True)
+        subject_frames = []
+        for subject in subjects:
+            ds = load("cais/mmlu", subject)
+            subject_frames.extend(
+                [pd.DataFrame(ds["validation"]), pd.DataFrame(ds["test"])]
+            )
+        df_all = pd.concat(subject_frames, ignore_index=True)
         
         # Sample if needed
         df_all = df_all.sample(n=self.dataset_size, random_state=self.seed).reset_index(drop=True)
@@ -145,7 +169,7 @@ class QADataset:
         return train_df.reset_index(drop=True), test_df.reset_index(drop=True)
 
     def _load_boolqa(self):
-        ds = load("boolq")                          
+        ds = load("google/boolq")
         df_train = pd.DataFrame(ds["train"])
         df_val = pd.DataFrame(ds["validation"])
         df_all = pd.concat([df_train, df_val], ignore_index=True)
@@ -174,7 +198,7 @@ class QADataset:
         )
 
     def _load_hotpotqa(self):
-        ds = load("hotpot_qa", "fullwiki", trust_remote_code=True)
+        ds = load("hotpotqa/hotpot_qa", "fullwiki", trust_remote_code=True)
         df_all = pd.concat(
             [ds[split].to_pandas() for split in ds.keys()],
             ignore_index=True
@@ -231,7 +255,7 @@ class QADataset:
         )
 
     def _load_pubmedqa(self):
-        pqa = load("pubmed_qa", "pqa_labeled")
+        pqa = load("qiaojin/PubMedQA", "pqa_labeled")
         pqa_df = pd.DataFrame(pqa["train"])
 
         pqa_df = pqa_df[pqa_df["final_decision"].isin(["yes", "no"])].copy()

@@ -33,6 +33,7 @@ parser.add_argument("--x_row_method", type=str, default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
 parser.add_argument("--x_range", default="{'x1': [-15, 15, 0.2]}")
+parser.add_argument("--x_sample_seed", default=0, type=int)
 parser.add_argument("--decimal_places", default=1, type=int)
 
 """Permutation Related Configuration"""
@@ -58,12 +59,14 @@ parser.add_argument("--std_method", default="default", type=str)
 
 """Save Configuration"""
 parser.add_argument("--run_name", default="test")
-parser.add_argument("--save_directory", default="other")
+parser.add_argument("--save_directory", default=None, help="Defaults to --model_name.")
 parser.add_argument("--x_save_value", default=0, type=int)
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
 args = parser.parse_args()
+if args.save_directory is None:
+    args.save_directory = args.model_name.rsplit("/", 1)[-1]
 
 @dataclass
 class ToyRegressionExperimentConfig:
@@ -270,7 +273,11 @@ class ToyRegressionExperiment:
                 self.num_api_calls += 1     
                 attempts += 1        
 
-                sample = extract(response)
+                try:
+                    sample = extract(response)
+                except ValueError:
+                    # Diffusion models often omit </output>; accept a bare number.
+                    sample = float(response.strip())
                 
                 if not isinstance(sample, float|int):
                     print(f"Invalid sample for {probability_calculated}: {sample}")
@@ -283,8 +290,12 @@ class ToyRegressionExperiment:
 
                 successful_seeds += 1
                 
-            except:
-                print(f"Call {self.num_api_calls} failed. Restarting for seed {successful_seeds}")   
+            except Exception as exc:
+                print(
+                    f"Call {self.num_api_calls} failed: "
+                    f"{type(exc).__name__}: {exc}. "
+                    f"Restarting for seed {successful_seeds}"
+                )
                         
         if successful_seeds == 0:
             raise ValueError(f"All seeds failed for {probability_calculated}.")      
@@ -387,9 +398,11 @@ class ToyRegressionExperiment:
         return save_df
             
     def run_experiment(self):
+        output_dir = f"results/toy_regression/{self.config.dataset_name}/{self.config.save_directory}"
+        os.makedirs(output_dir, exist_ok=True)
         for x_idx in range(self.num_x_values):
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(f"results/toy_regression/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
+            save_df.to_csv(f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
         
 def main():
     config = ToyRegressionExperimentConfig(**vars(args))

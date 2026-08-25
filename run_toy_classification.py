@@ -55,12 +55,14 @@ parser.add_argument("--num_candidates", default=3, type=int)
 
 """Save Configuration"""
 parser.add_argument("--run_name", default="test")
-parser.add_argument("--save_directory", default="other")
+parser.add_argument("--save_directory", default=None, help="Defaults to --model_name.")
 parser.add_argument("--x_save_value", default=0, type=int)
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
 args = parser.parse_args()
+if args.save_directory is None:
+    args.save_directory = args.model_name.rsplit("/", 1)[-1]
 
 @dataclass
 class ToyClassificationExperimentConfig:
@@ -150,9 +152,9 @@ class ToyClassificationExperiment:
 
         self.D_note_label_df = D_rows[['note', 'label']]
 
-        if not os.path.exists(f"results/{self.config.dataset_name}/{self.config.save_directory}"):
-            os.makedirs(f"results/{self.config.dataset_name}/{self.config.save_directory}")
-        D_rows.to_csv(f"results/{self.config.dataset_name}/{self.config.save_directory}/D_{self.config.run_name}.csv", index=False)
+        output_dir = f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}"
+        os.makedirs(output_dir, exist_ok=True)
+        D_rows.to_csv(f"{output_dir}/D_{self.config.run_name}.csv", index=False)
     
     def calculate_avg_probs(
         self,
@@ -194,10 +196,19 @@ class ToyClassificationExperiment:
                     avg_probs[label] += prob
                     
                 successful_seeds += 1
-            except:
-                print(f"Seed {seed + 1} failed.")
+            except Exception as exc:
+                print(
+                    f"Seed {seed + 1} failed: "
+                    f"{type(exc).__name__}: {exc}"
+                )
 
             self.num_api_calls += 1
+
+        if successful_seeds == 0:
+            raise ValueError(
+                f"All seeds failed for {probability_calculated}. "
+                "Check the model server and request format."
+            )
 
         avg_probs = {label: prob / successful_seeds for label, prob in avg_probs.items()}
         
@@ -389,16 +400,20 @@ class ToyClassificationExperiment:
         return save_df
             
     def run_experiment_default(self):
+        output_dir = f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}"
+        os.makedirs(output_dir, exist_ok=True)
         for x_idx in range(self.num_x_values):
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
+            save_df.to_csv(f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
     
     def run_experiment(self):
         self.run_experiment_default()
         
         print(f"Total API Calls: {self.num_api_calls}")
         
-        with open(f"results/{self.config.dataset_name}/{self.config.save_directory}/api_calls_{self.config.run_name}.txt", "w") as f:
+        output_dir = f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}"
+        os.makedirs(output_dir, exist_ok=True)
+        with open(f"{output_dir}/api_calls_{self.config.run_name}.txt", "w") as f:
             f.write(f"Total API Calls: {self.num_api_calls}")
 def main():
     config = ToyClassificationExperimentConfig(**vars(args))
