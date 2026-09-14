@@ -193,7 +193,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-run_llm.sh
+run_llm*.sh
+.run*
+.smoke_dream_rep.py
+tests/
 
 # csv files
 *.csv
