@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import argparse
 import pandas as pd
 import numpy as np
@@ -9,9 +10,10 @@ from dataclasses import dataclass
 
 from src.dataset import load_dataset
 from src.bayesian_optimisation import new_candidate
-from src.utils import ToyClassificationUtils, calculate_entropy, calculate_kl_divergence, calculate_discrete_variance
+from src.utils import ToyClassificationUtils, calculate_entropy, calculate_kl_divergence, calculate_discrete_variance, calculate_min_Va_by_KL_rank
 from src.prompt import ToyClassificationPrompt
 from src.chat import chat
+from src.parallel.va_estimators import get_va_estimator
 
 pd.set_option('display.max_columns', None)
 
@@ -60,9 +62,43 @@ parser.add_argument("--x_save_value", default=0, type=int)
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
-args = parser.parse_args()
-if args.save_directory is None:
-    args.save_directory = args.model_name.rsplit("/", 1)[-1]
+parser.add_argument("--plot", default=1, type=int, help="Save the 1D total-uncertainty decomposition plot after the run. Default 1.")
+parser.add_argument(
+    "--resume",
+    default=0,
+    type=int,
+    help="Skip x-slices whose result CSV already exists and continue from the first missing slice.",
+)
+parser.add_argument(
+    "--va_method",
+    default="vanilla",
+    type=str,
+    choices=("vanilla", "parallel_pf", "parallel_pp", "parallel", "parallel_hybrid"),
+    help=(
+        "Va estimator: vanilla (forward factorization), parallel_pf (joint-canvas "
+        "samples scored by the forward conditional), parallel_pp (joint-count entropy), "
+        "parallel (legacy PF alias), or "
+        "parallel_hybrid (parallel u with conditional entropy of sequential y|u)."
+    ),
+)
+parser.add_argument(
+    "--num_joint_samples",
+    default=10,
+    type=int,
+    help="Number of joint (u, y) Monte Carlo samples for parallel Va.",
+)
+args = None
+
+
+def parse_args(argv=None):
+    global args
+    args = parser.parse_args(argv)
+    save_directory_was_default = args.save_directory is None
+    if args.save_directory is None:
+        args.save_directory = args.model_name.rsplit("/", 1)[-1]
+    if save_directory_was_default:
+        args.save_directory = f"{str(args.save_directory).rstrip('/')}/va_{args.va_method}"
+    return args
 
 @dataclass
 class ToyClassificationExperimentConfig:
@@ -102,6 +138,161 @@ class ToyClassificationExperimentConfig:
     num_api_calls_save_value: int
     
     verbose_output: int
+    plot: int
+    resume: int
+    va_method: str
+    num_joint_samples: int
+
+def save_toy_classification_plots(output_dir: str, run_name: str) -> list[str]:
+    """Save the total-uncertainty plot using the code in eval/eval_toy_1d_class.ipynb."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from csaps import csaps
+
+    eval_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "eval")
+    if eval_dir not in sys.path:
+        sys.path.insert(0, eval_dir)
+    from notebook_utils import set_plot_style
+
+    set_plot_style()
+
+    results_directory = output_dir if output_dir.endswith(os.sep) else output_dir + os.sep
+
+    D_data = None
+    for filename in os.listdir(results_directory):
+        if f"D_" in filename and filename.endswith(".csv"):
+            D_data = pd.read_csv(results_directory + filename)
+
+    if D_data is None:
+        print(f"Skipping plot: missing ICL file in {output_dir}")
+        return []
+
+    feature_column = [col for col in D_data.columns if col != "label" and col != "note"][0]
+
+    df_list = []
+    for filename in os.listdir(results_directory):
+        if f"results_" in filename:
+            save_data = pd.read_csv(results_directory + filename)
+            df_list.append(save_data)
+
+    if not df_list:
+        print(f"Skipping plot: no results_*.csv files in {output_dir}")
+        return []
+
+    for save_data in df_list:
+        if "Var[p(y|x,D)]" in save_data.columns:
+            save_data["Var[y|x,D]"] = save_data["Var[p(y|x,D)]"]
+        save_data = calculate_min_Va_by_KL_rank(save_data, num_valid_Va=5, forward_kl=True, upper_bound_by_total_U=True)
+        save_data = calculate_min_Va_by_KL_rank(save_data, num_valid_Va=5, forward_kl=True, upper_bound_by_total_U=True, uncertainty_type="variance")
+
+    x_x1_list = []
+    total_uncertainty_list = []
+    min_Va_list = []
+    max_Ve_list = []
+    kl_pyx_pyxz_list = []
+    within_threshold_list = []
+    total_variance_list = []
+    min_Va_variance_list = []
+    max_Ve_variance_list = []
+
+    for z_df in df_list:
+        try:
+            x_x1 = z_df[f"x_{feature_column}"].values[0]
+            x_x1_list.append(x_x1)
+            total_uncertainty = z_df["H[p(y|x,D)]"].values[0]
+            total_uncertainty_list.append(total_uncertainty)
+
+            min_Va = z_df["min_Va"].values[0]
+            min_Va_list.append(min_Va)
+            max_Ve = z_df["max_Ve"].values[0]
+            max_Ve_list.append(max_Ve)
+
+            within_threshold_list.append(z_df[z_df["within_threshold"]][f"z_{feature_column}"].values)
+
+            min_Va_index = z_df[z_df["z_value_for_min_Va"]].index[0]
+
+            kl_pyx_pyxz = z_df["kl_pyx_pyxz"].values[min_Va_index]
+            kl_pyx_pyxz_list.append(kl_pyx_pyxz)
+
+        except Exception:
+            pass
+
+        try:
+            total_variance = z_df["Var[y|x,D]"].values[0]
+            total_variance_list.append(total_variance)
+
+            min_Va_variance = z_df["min_Va_variance"].values[0]
+            min_Va_variance_list.append(min_Va_variance)
+
+            max_Ve_variance = z_df["max_Ve_variance"].values[0]
+            max_Ve_variance_list.append(max_Ve_variance)
+        except Exception:
+            pass
+
+    data = {
+        f"x_{feature_column}": x_x1_list,
+        "total_uncertainty": total_uncertainty_list,
+        "min_Va": min_Va_list,
+        "max_Ve": max_Ve_list,
+        "within_threshold": within_threshold_list,
+        "kl_pyx_pyxz": kl_pyx_pyxz_list,
+    }
+
+    if len(total_variance_list) > 0:
+        data["total_variance"] = total_variance_list
+        data["min_Va_variance"] = min_Va_variance_list
+        data["max_Ve_variance"] = max_Ve_variance_list
+
+    num_Va = len(min_Va_list)
+    for key in data.keys():
+        data[key] = data[key][:num_Va]
+
+    results_df = pd.DataFrame(data)
+    results_df = results_df.sort_values(by="x_x1")
+
+    fig, ax = plt.subplots(figsize=(12, 6.5))
+    plt.scatter(results_df[f"x_{feature_column}"], results_df["total_uncertainty"], color="C0", alpha=0.4)
+    plt.scatter(results_df[f"x_{feature_column}"], results_df["min_Va"], color="C1", alpha=0.4)
+
+    # line of best fit
+
+    x_grid = np.linspace(results_df[f"x_{feature_column}"].min(), results_df[f"x_{feature_column}"].max(), 100)
+    y_total_uncertainty = csaps(results_df[f"x_{feature_column}"], results_df["total_uncertainty"], smooth=0.85)
+    y_min_Va = csaps(results_df[f"x_{feature_column}"], results_df["min_Va"], smooth=0.85)
+
+    plt.plot(x_grid, y_total_uncertainty(x_grid), color="C0", linewidth=3, label="Total Uncertainty")
+    plt.plot(x_grid, y_min_Va(x_grid), color="C1", linewidth=3, label="Aleatoric Uncertainty")
+
+    # vertical line for the true x
+    label_0_seen = False
+    label_1_seen = False
+    for i, row in D_data.iterrows():
+        if row["label"] == 0:
+            if not label_0_seen:
+                label_0_seen = True
+                label_string = r"ICL Data: $y = 0$"
+            else:
+                label_string = None
+            plt.axvline(x=row[feature_column], color="C2", linestyle="--", linewidth=3, alpha=0.3, label=label_string)
+        else:
+            if not label_1_seen:
+                label_1_seen = True
+                label_string = r"ICL Data: $y = 1$"
+            else:
+                label_string = None
+            plt.axvline(x=row[feature_column], color="C3", linestyle="--", linewidth=3, alpha=0.3, label=label_string)
+
+    plt.title("Total Uncertainty Decomposition: Toy Classification")
+    plt.ylabel("Uncertainty")
+    plt.xlabel(r"Test Covariate $x$")
+
+    plt.legend(framealpha=0.75)
+
+    plot_path = os.path.join(output_dir, f"plot_entropy_decomposition_{run_name}.png")
+    fig.savefig(plot_path, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return [plot_path]
     
 class ToyClassificationExperiment:
     def __init__(self, config: ToyClassificationExperimentConfig):
@@ -109,7 +300,7 @@ class ToyClassificationExperiment:
         
         np.random.seed(self.config.numpy_seed)
 
-        self.prompter = ToyClassificationPrompt()
+        self.prompter = ToyClassificationPrompt(model_name=self.config.model_name)
         
         if self.config.num_bo_z > self.config.num_z:
             raise ValueError("Number of bo z values cannot be greater than number of z values.")
@@ -119,6 +310,8 @@ class ToyClassificationExperiment:
         self.data_preprocessing()
         
         self.num_api_calls = self.config.num_api_calls_save_value
+        self.va_estimator = get_va_estimator(self.config.va_method, self.config.num_joint_samples)
+        print(f"Va estimator: {self.va_estimator.name}")
 
     def data_preprocessing(self):
         self.data_path = f'datasets_toy_classification/{self.config.dataset_name}'
@@ -216,6 +409,34 @@ class ToyClassificationExperiment:
             print(f"\nAveraged {probability_calculated} probabilities: {avg_probs}")
             
         return avg_probs
+
+    def score_query_probs(
+        self,
+        query_note: str,
+        permutation_seed: int,
+        icl_z_note: Optional[str] = None,
+        icl_u_label: Optional[str | int] = None,
+    ) -> dict:
+        """One-shot p(y|x,u,z,D) score used after a joint u sample."""
+        prompt = self.prompter.get_general_prompt(
+            D_df=self.D_note_label_df,
+            query_note=query_note,
+            permutation_seed=permutation_seed,
+            icl_z_note=icl_z_note,
+            icl_u_label=icl_u_label,
+        )
+        _pred, probs = chat(
+            prompt,
+            self.label_keys,
+            seed=permutation_seed,
+            model=self.config.model_name,
+            port=self.config.model_port,
+            ip=self.config.model_ip,
+            temperature=self.config.model_temperature,
+            is_local_client=self.config.is_local_client,
+        )
+        self.num_api_calls += 1
+        return probs
     
     def get_next_z(self, z_idx: int, x_idx: int):
         if z_idx < self.config.num_z - self.config.num_bo_z:
@@ -312,56 +533,12 @@ class ToyClassificationExperiment:
             row = self.z_data.iloc[i]
             
             z = row['note']
-            
-            # Compute p(u|z,D)
-            avg_puz_probs = self.calculate_avg_probs(z, "p(u|z,D)")
-            
-            # Compute p(y|x,u,z,D)
-            avg_pyxu_z_probs = {}
-            
-            for outer_label in self.label_keys:
-                probability_calculated = f"p(y|x,u={outer_label},z,D)"
-                
-                avg_probs_for_outer_label = self.calculate_avg_probs(
-                    query_note=x,
-                    probability_calculated=probability_calculated,
-                    icl_z_note=z,
-                    icl_u_label=outer_label
-                )
-                
-                avg_pyxu_z_probs.update({probability_calculated: avg_probs_for_outer_label})
-            
-            # Marginalisation
-            avg_pyxz_probs = {}
 
-            for label in self.label_keys:  # Iterate over all possible values of y
-                avg_pyxz_probs[label] = sum(
-                    avg_pyxu_z_probs[f"p(y|x,u={u_label},z,D)"][label] * avg_puz_probs[u_label]
-                    for u_label in self.label_keys
-                )
-                
-            # Entropy
-            Huz = calculate_entropy(avg_puz_probs)
-            Var_uz = calculate_discrete_variance(avg_puz_probs)
-            Hyxuz = {f"H[{key}]": calculate_entropy(value) for key, value in avg_pyxu_z_probs.items()}
-            Var_yxuz = {f"Var[{key}]": calculate_discrete_variance(value) for key, value in avg_pyxu_z_probs.items()}          
-            E_Hyxz = 0.0
-            E_Var_yxuz = 0.0
-            for label in self.label_keys:
-                E_Hyxz += Hyxuz[f"H[p(y|x,u={label},z,D)]"]*avg_puz_probs[label]
-                E_Var_yxuz += Var_yxuz[f"Var[p(y|x,u={label},z,D)]"]*avg_puz_probs[label]
-            Va = np.round(E_Hyxz, 5)
-            Ve = Hyx - Va
-            Va_variance = np.round(E_Var_yxuz, 5)
-            Ve_variance = total_variance - Va_variance
-            
-            # KL Divergence
-            kl_pyx_pyxz = calculate_kl_divergence(avg_pyx_probs, avg_pyxz_probs)
-            kl_pyxz_pyx = calculate_kl_divergence(avg_pyxz_probs, avg_pyx_probs)
-            
-            self.z_BO_maximisation_objective.append(-Va - kl_pyx_pyxz)
-        
-            # Save            
+            z_fields = self.va_estimator.estimate(
+                self, x, z, avg_pyx_probs, Hyx, total_variance
+            )
+            self.z_BO_maximisation_objective.append(-z_fields["Va"] - z_fields["kl_pyx_pyxz"])
+
             save_dict = {f"z_{feature}": row[feature] for feature in self.feature_columns}
             save_dict["z_note"] = z
             save_dict_x = {f"x_{feature}": self.x_row.iloc[x_idx][feature] for feature in self.feature_columns}
@@ -369,42 +546,65 @@ class ToyClassificationExperiment:
             save_dict = {**save_dict, **save_dict_x}
             for label, prob in avg_pyx_probs.items():
                 save_dict[f"p(y={label}|x,D)"] = prob
-            for label, prob in avg_puz_probs.items():
-                save_dict[f"p(u={label}|z,D)"] = prob
-            for key, outer_label_probs in avg_pyxu_z_probs.items():
-                for label, prob in outer_label_probs.items():
-                    new_key = re.sub(r'y', f'y={label}', key, count=1)
-                    save_dict[new_key] = prob
-            for label, prob in avg_pyxz_probs.items():
-                save_dict[f"p(y={label}|x,z,D)"] = prob
-            save_dict["H[p(u|z,D)]"] = Huz
-            save_dict["Var[u|z,D]"] = Var_uz
-            for key, entropy in Hyxuz.items():
-                save_dict[key] = entropy
-            for key, variance in Var_yxuz.items():
-                save_dict[key] = variance
             save_dict["H[p(y|x,D)]"] = Hyx
             save_dict["Var[y|x,D]"] = total_variance
-            save_dict["Va"] = Va
-            save_dict["Ve"] = Ve
-            save_dict["Va_variance"] = Va_variance
-            save_dict["Ve_variance"] = Ve_variance
-            save_dict["kl_pyx_pyxz"] = kl_pyx_pyxz
-            save_dict["kl_pyxz_pyx"] = kl_pyxz_pyx
+            save_dict.update(z_fields)
             save_dict["api_calls"] = self.num_api_calls
-            
+
             save_dict_list.append(save_dict)
             
         save_df = pd.DataFrame(save_dict_list)
         
         return save_df
             
+    def _x_csv_path(self, output_dir: str, x_idx: int) -> str:
+        return f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv"
+
+    def _resume_from_existing(self, output_dir: str) -> None:
+        if not self.config.resume:
+            return
+        last_idx = None
+        n_skip = 0
+        for x_idx in range(self.num_x_values):
+            path = self._x_csv_path(output_dir, x_idx)
+            if os.path.isfile(path) and os.path.getsize(path) > 0:
+                last_idx = x_idx
+                n_skip += 1
+        if last_idx is None:
+            print("Resume: no existing x-slices found, starting from the beginning.")
+            return
+        last_path = self._x_csv_path(output_dir, last_idx)
+        last_df = pd.read_csv(last_path)
+        if "api_calls" in last_df.columns and len(last_df):
+            self.num_api_calls = int(last_df["api_calls"].iloc[-1])
+        print(
+            f"Resume: skipping {n_skip}/{self.num_x_values} existing x-slices "
+            f"(last kept x{last_idx + self.config.x_save_value}, api_calls={self.num_api_calls})."
+        )
+
     def run_experiment_default(self):
         output_dir = f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}"
         os.makedirs(output_dir, exist_ok=True)
+        self._resume_from_existing(output_dir)
+        feature_column = self.feature_columns[0]
         for x_idx in range(self.num_x_values):
+            csv_path = self._x_csv_path(output_dir, x_idx)
+            if self.config.resume and os.path.isfile(csv_path) and os.path.getsize(csv_path) > 0:
+                continue
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
+            save_df.to_csv(csv_path, index=False)
+            if self.config.plot:
+                x_val = float(self.x_row.iloc[x_idx][feature_column])
+                at_checkpoint = abs(x_val / 5.0 - round(x_val / 5.0)) < 1e-6
+                at_end = x_idx == self.num_x_values - 1
+                if at_checkpoint or at_end:
+                    try:
+                        plot_paths = save_toy_classification_plots(output_dir, self.config.run_name)
+                    except Exception as exc:
+                        print(f"Skipping plot refresh at x={x_val}: {exc}")
+                    else:
+                        for path in plot_paths:
+                            print(f"Saved plot at x={x_val}: {path}")
     
     def run_experiment(self):
         self.run_experiment_default()
@@ -415,12 +615,23 @@ class ToyClassificationExperiment:
         os.makedirs(output_dir, exist_ok=True)
         with open(f"{output_dir}/api_calls_{self.config.run_name}.txt", "w") as f:
             f.write(f"Total API Calls: {self.num_api_calls}")
-def main():
+
+        if self.config.plot:
+            output_dir = f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}"
+            try:
+                plot_paths = save_toy_classification_plots(output_dir, self.config.run_name)
+            except ImportError as exc:
+                print(f"Skipping plot: {exc}. Install matplotlib and csaps to enable --plot.")
+            else:
+                for path in plot_paths:
+                    print(f"Saved plot: {path}")
+
+def main(argv=None):
+    parse_args(argv)
     config = ToyClassificationExperimentConfig(**vars(args))
-    
     experiment = ToyClassificationExperiment(config)
-    
     experiment.run_experiment()
+
 
 if __name__ == "__main__":
     main()

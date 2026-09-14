@@ -31,13 +31,106 @@ IMPORTANT: Output ONLY the label inside <output></output> tags. Do not add any e
  {note} <reward>""",
 }
 
+# Instruction-tuned models (DiffusionGemma). Same ICL format, plus task instructions.
+PROMPT_TYPES_TO_TEXT_TEMPLATE_INSTRUCT = {
+    "qa": \
+"""You are given a set of in-context examples and a new input. Your task is to predict the label of the new input.
+
+Please carefully review the following examples and their labels inside <output>{{labels}}</output> tags:
+
+{icl}
+
+Now, predict the label for this new input:
+
+{note}
+
+IMPORTANT: Output ONLY the label inside <output></output> tags. Do not add any explanation, text, or formatting. Your response must strictly follow this format:
+
+<output>{{label_prediction}}</output>
+""",
+    "toy_classification": \
+"""You are given a set of in-context examples and a new input. Your task is to predict the class label of the new input.
+
+Please carefully review the following examples and their labels inside <output>{{labels}}</output> tags:
+
+{icl}
+
+Now, predict the label for this new input:
+
+{note}
+
+IMPORTANT: Output ONLY the label inside <output></output> tags. Do not add any explanation, text, or formatting. Your response must strictly follow this format:
+
+<output>{{label_prediction}}</output>
+""",
+    "toy_regression": \
+"""You are given a set of in-context examples and a new input. Your task is to predict the numeric value of the new input.
+
+Please carefully review the following examples and their values inside <output>{{value}}</output> tags:
+
+{icl}
+
+Now, predict the value for this new input:
+
+{note}
+
+IMPORTANT: Output ONLY the number inside <output></output> tags. Do not add any explanation, text, or formatting. Your response must strictly follow this format:
+
+<output>{{value_prediction}}</output>
+""",
+    "bandit_classification": \
+"""You are given a set of in-context examples and a new input. Your task is to predict the reward of the new input.
+
+Please carefully review the following examples and their rewards inside <reward>{{rewards}}</reward> tags:
+
+{icl}
+
+Now, predict the reward for this new input:
+
+{note}
+
+IMPORTANT: Output ONLY the reward inside <reward></reward> tags. Do not add any explanation, text, or formatting. Your response must strictly follow this format:
+
+<reward>{{reward_prediction}}</reward>
+""",
+    "bandit_regression": \
+"""You are given a set of in-context examples and a new input. Your task is to predict the numeric reward of the new input.
+
+Please carefully review the following examples and their rewards inside <reward>{{rewards}}</reward> tags:
+
+{icl}
+
+Now, predict the reward for this new input:
+
+{note}
+
+IMPORTANT: Output ONLY the number inside <reward></reward> tags. Do not add any explanation, text, or formatting. Your response must strictly follow this format:
+
+<reward>{{reward_prediction}}</reward>
+""",
+}
+
+
+def _uses_instruct_prompt(model_name: Optional[str]) -> bool:
+    if not model_name:
+        return False
+    name = model_name.lower().replace("_", "-")
+    return "diffusiongemma" in name or ("dream-v0" in name and "instruct" in name)
+
+
 class Prompt():
-    def __init__(self, prompt_type) -> None:
+    def __init__(self, prompt_type, model_name: Optional[str] = None) -> None:
         self.prompt_type = prompt_type
+        self.model_name = model_name
 
     @property
     def prompt_text(self) -> str:
-        return PROMPT_TYPES_TO_TEXT_TEMPLATE[self.prompt_type]
+        templates = (
+            PROMPT_TYPES_TO_TEXT_TEMPLATE_INSTRUCT
+            if _uses_instruct_prompt(self.model_name)
+            else PROMPT_TYPES_TO_TEXT_TEMPLATE
+        )
+        return templates[self.prompt_type]
             
     def get_puzD_prompt(self, z, D):
         return self.prompt_text.format(self=self, note=z, icl=D)
@@ -49,8 +142,8 @@ class Prompt():
         return self.prompt_text.format(self=self, note=x, icl=D)
     
 class ToyPrompt(Prompt):
-    def __init__(self, prompt_type) -> None:
-        super().__init__(prompt_type=prompt_type)
+    def __init__(self, prompt_type, model_name: Optional[str] = None) -> None:
+        super().__init__(prompt_type=prompt_type, model_name=model_name)
     
     def note_label_prompt(self, note: str, label: str) -> str:
         prompt = f""" {note} <output>{label}</output>"""
@@ -106,8 +199,8 @@ class ToyPrompt(Prompt):
         return self.prompt_text.format(self=self, note=query_note, icl=icl_string)
     
 class ToyClassificationPrompt(ToyPrompt):    
-    def __init__(self) -> None:
-        super().__init__(prompt_type="toy_classification")
+    def __init__(self, model_name: Optional[str] = None) -> None:
+        super().__init__(prompt_type="toy_classification", model_name=model_name)
     
     def note_label_prompt(self, note: str, label: str):
         prompt = f""" {note} <output>{label}</output>"""
@@ -115,8 +208,8 @@ class ToyClassificationPrompt(ToyPrompt):
         return prompt
     
 class ToyRegressionPrompt(ToyPrompt):
-    def __init__(self) -> None:
-        super().__init__(prompt_type="toy_regression")
+    def __init__(self, model_name: Optional[str] = None) -> None:
+        super().__init__(prompt_type="toy_regression", model_name=model_name)
     
     def note_label_prompt(self, note: str, label: str):
         prompt = f""" {note} <output> {label} </output>"""
@@ -124,8 +217,8 @@ class ToyRegressionPrompt(ToyPrompt):
         return prompt
     
 class BanditClassificationPrompt(ToyPrompt):
-    def __init__(self) -> None:
-        super().__init__(prompt_type="bandit_classification")
+    def __init__(self, model_name: Optional[str] = None) -> None:
+        super().__init__(prompt_type="bandit_classification", model_name=model_name)
     
     def note_label_prompt(self, note: str, label: str):
         prompt = f""" {note} <reward>{label}</reward>"""
@@ -133,8 +226,8 @@ class BanditClassificationPrompt(ToyPrompt):
         return prompt
     
 class BanditRegressionPrompt(ToyPrompt):
-    def __init__(self) -> None:
-        super().__init__(prompt_type="bandit_regression")
+    def __init__(self, model_name: Optional[str] = None) -> None:
+        super().__init__(prompt_type="bandit_regression", model_name=model_name)
         
     def note_label_df_to_icl_string(
             self,

@@ -2,7 +2,37 @@ import requests
 import math
 import time
 from openai import OpenAI, types
-from src.llada_backend import generate_text, is_llada_model, score_labels
+from src.dream_backend import (
+    generate_text as dream_generate_text,
+    is_dream_model,
+    score_labels as dream_score_labels,
+    sample_two_label_slots as dream_sample_two_label_slots,
+    sample_two_number_slots as dream_sample_two_number_slots,
+    score_y_given_u_label as dream_score_y_given_u_label,
+    score_two_label_joint as dream_score_two_label_joint,
+    score_two_label_marginals as dream_score_two_label_marginals,
+    sample_y_given_u_ids as dream_sample_y_given_u_ids,
+    infer_number_n_masks as dream_infer_number_n_masks,
+    U_PLACEHOLDER,
+)
+
+try:
+    from src.llada_backend import generate_text, is_llada_model, score_labels
+except ModuleNotFoundError:
+    # LLaDA local backend is optional; DiffusionGemma and other vLLM models
+    # go through the HTTP client below.
+    def is_llada_model(model: str) -> bool:
+        return "llada" in model.lower()
+
+    def generate_text(*args, **kwargs):
+        raise RuntimeError(
+            "src.llada_backend is missing. It is only required for LLaDA models."
+        )
+
+    def score_labels(*args, **kwargs):
+        raise RuntimeError(
+            "src.llada_backend is missing. It is only required for LLaDA models."
+        )
 
 OPENAI_API_KEY = "ADD_API_KEY_HERE"  # Replace with your OpenAI API key
 
@@ -53,6 +83,15 @@ def _post_local_json(url: str, headers: dict, data: dict, max_retries: int = 3) 
     raise RuntimeError("Local model server request failed without a response.")
 
 def chat(message: str, label_keys, seed: int, temperature: float=1.0, model: str ="Qwen/Qwen2.5-14B", port: str = "8000", ip: str = "localhost", is_local_client: bool | int = True):
+    if is_local_client and is_dream_model(model):
+        return dream_score_labels(
+            message,
+            label_keys,
+            seed=seed,
+            temperature=temperature,
+            model_name=model,
+        )
+
     if is_local_client and is_llada_model(model):
         return score_labels(
             message,
@@ -60,6 +99,16 @@ def chat(message: str, label_keys, seed: int, temperature: float=1.0, model: str
             seed=seed,
             temperature=temperature,
             model_name=model,
+        )
+
+    if is_local_client and _is_diffusion_gemma(model):
+        return chat_qa(
+            message,
+            label_keys,
+            seed=seed,
+            model=model,
+            port=int(port),
+            ip=ip,
         )
 
     if is_local_client:
@@ -119,6 +168,15 @@ def chat(message: str, label_keys, seed: int, temperature: float=1.0, model: str
     return text_output, normalized_probs
 
 def chat_response_only(message: str, seed: int, max_tokens: int=10, temperature: float=1.0, model: str="Qwen/Qwen2.5-14B", port: str="8000", ip: str="localhost", is_local_client: bool | int = True):
+    if is_local_client and is_dream_model(model):
+        return dream_generate_text(
+            message,
+            seed=seed,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            model_name=model,
+        )
+
     if is_local_client and is_llada_model(model):
         return generate_text(
             message,
@@ -171,6 +229,151 @@ def chat_response_only(message: str, seed: int, max_tokens: int=10, temperature:
     
     return text_output
 
+def sample_joint_labels(
+    icl: str,
+    x_note: str,
+    label_keys,
+    seed: int,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+    message: str | None = None,
+):
+    """Sample (u, y) jointly from a two-mask canvas. Dream only. `icl` contains U_PLACEHOLDER."""
+    if is_dream_model(model):
+        return dream_sample_two_label_slots(
+            icl,
+            x_note,
+            label_keys,
+            seed=seed,
+            temperature=temperature,
+            model_name=model,
+            message=message,
+        )
+    raise RuntimeError(
+        f"Joint two-slot sampling is only implemented for Dream, not {model}."
+    )
+
+
+def sample_joint_numbers(
+    icl: str,
+    x_note: str,
+    seed: int,
+    n_masks: int = 8,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+) -> tuple[float, float, list[int]]:
+    """Sample (u, y) numbers jointly from two mask spans. Dream only. Returns u_ids."""
+    if is_dream_model(model):
+        return dream_sample_two_number_slots(
+            icl,
+            x_note,
+            seed=seed,
+            n_masks=n_masks,
+            temperature=temperature,
+            model_name=model,
+        )
+    raise RuntimeError(
+        f"Joint two-slot number sampling is only implemented for Dream, not {model}."
+    )
+
+
+def score_joint_y_given_u(
+    icl: str,
+    x_note: str,
+    u: str,
+    label_keys,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+) -> dict:
+    """Score pP(y | x, u, z, D) on the two-mask canvas with u filled. Dream only."""
+    if is_dream_model(model):
+        return dream_score_y_given_u_label(
+            icl,
+            x_note,
+            u,
+            label_keys,
+            temperature=temperature,
+            model_name=model,
+        )
+    raise RuntimeError(
+        f"Canvas p(y|u) scoring is only implemented for Dream, not {model}."
+    )
+
+
+def score_joint_label_marginals(
+    icl: str,
+    x_note: str,
+    label_keys,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+) -> tuple[dict, dict]:
+    """Score p(u) and p(y) with both canvas slots masked. Dream only."""
+    if is_dream_model(model):
+        return dream_score_two_label_marginals(
+            icl,
+            x_note,
+            label_keys,
+            temperature=temperature,
+            model_name=model,
+        )
+    raise RuntimeError(
+        f"Canvas label marginals are only implemented for Dream, not {model}."
+    )
+
+
+def score_joint_label_distribution(
+    icl: str,
+    x_note: str,
+    label_keys,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+):
+    """Return the exact joint law of Dream's constrained two-slot denoiser."""
+    if is_dream_model(model):
+        return dream_score_two_label_joint(
+            icl,
+            x_note,
+            label_keys,
+            temperature=temperature,
+            model_name=model,
+        )
+    raise RuntimeError(
+        f"Joint label distribution is only implemented for Dream, not {model}."
+    )
+
+
+def sample_joint_y_given_u(
+    icl: str,
+    x_note: str,
+    u_ids: list[int],
+    seed: int,
+    n_masks: int = 8,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+) -> float:
+    """Sample y from pP(y | x, u, z, D) with the u span frozen. Dream only."""
+    if is_dream_model(model):
+        return dream_sample_y_given_u_ids(
+            icl,
+            x_note,
+            u_ids,
+            seed=seed,
+            n_masks=n_masks,
+            temperature=temperature,
+            model_name=model,
+        )
+    raise RuntimeError(
+        f"Canvas p(y|u) number sampling is only implemented for Dream, not {model}."
+    )
+
+
+def infer_number_n_masks(labels, model: str) -> int:
+    if is_dream_model(model):
+        return dream_infer_number_n_masks(labels, model)
+    raise RuntimeError(
+        f"Number mask inference is only implemented for Dream, not {model}."
+    )
+
 ### QA ###
 from openai import OpenAI
 import os
@@ -183,6 +386,15 @@ def chat_perturb(
     port: int = 8000,
     ip: str = "localhost",
 ):
+    if is_dream_model(model):
+        return dream_generate_text(
+            message,
+            seed=seed,
+            max_tokens=min(int(max_tokens), 256),
+            temperature=1.0,
+            model_name=model,
+        )
+
     if is_llada_model(model):
         return generate_text(
             message,
@@ -235,6 +447,15 @@ def chat_qa(
     port: int = 8000,
     ip: str = "localhost",
 ):
+    if is_dream_model(model):
+        return dream_score_labels(
+            message,
+            label_keys,
+            seed=seed,
+            temperature=1.0,
+            model_name=model,
+        )
+
     if is_llada_model(model):
         return score_labels(
             message,

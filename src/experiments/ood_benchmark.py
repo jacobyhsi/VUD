@@ -1,7 +1,9 @@
 import argparse
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
 from src.dataset import QADataset
 from src.prompt import Prompt
 from src.chat import chat_qa
@@ -27,7 +29,31 @@ def aggregate_distributions(dist_list):
     return arr.mean(axis=0), keys, arr
 
 
-def main():
+args = None
+
+
+def build_parser():
+    parser = argparse.ArgumentParser("Deep Ensembles* QA OOD Pipeline")
+    parser.add_argument("--seed", type=int, default=123, help="Global random seed")
+    parser.add_argument("--id", default="boolqa", help="In domain dataset name")
+    parser.add_argument("--ood", default="pubmedqa", help="OOD dataset name")
+    parser.add_argument("--num_d", type=int, default=15, help="# in context examples per prompt")
+    parser.add_argument("--K", type=int, default=5, help="# ensemble members (prompts) per x")
+    parser.add_argument("--max_examples", type=int, default=None, help="Debug limit on #test rows")
+    parser.add_argument("--run_seed", type=int, default=0, help="Random seed for sampling test rows")
+    return parser
+
+
+def parse_args(argv=None):
+    global args
+    args = build_parser().parse_args(argv)
+    return args
+
+
+def main(argv=None):
+    global args
+    if argv is not None or args is None:
+        parse_args(argv)
     global_seed = int(args.seed)
 
     qa = QADataset(args.id, args.ood)
@@ -108,13 +134,4 @@ def main():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Deep Ensembles* QA OOD Pipeline")
-    parser.add_argument("--seed", type=int, default=123, help="Global random seed")
-    parser.add_argument("--id", default="boolqa", help="In domain dataset name")
-    parser.add_argument("--ood", default="pubmedqa", help="OOD dataset name")
-    parser.add_argument("--num_d", type=int, default=15, help="# in context examples per prompt")
-    parser.add_argument("--K", type=int, default=5, help="# ensemble members (prompts) per x")
-    parser.add_argument("--max_examples", type=int, default=None, help="Debug limit on #test rows")
-    parser.add_argument("--run_seed", type=int, default=0, help="Random seed for sampling test rows")
-    args = parser.parse_args()
     main()

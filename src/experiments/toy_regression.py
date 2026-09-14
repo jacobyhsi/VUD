@@ -1,6 +1,9 @@
 import os
 import re
+import sys
 import argparse
+import json
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from typing import Optional
@@ -9,9 +12,14 @@ from dataclasses import dataclass
 
 from src.dataset import load_dataset
 from src.bayesian_optimisation import new_candidate
-from src.utils import ToyRegressionUtils, GaussianDistribution, extract
+from src.utils import ToyRegressionUtils, GaussianDistribution, extract, calculate_min_Va_by_KL_rank
 from src.prompt import ToyRegressionPrompt
 from src.chat import chat_response_only
+from src.parallel.va_estimators import get_regression_va_estimator
+from src.parallel.regression_parallel_stats import (
+    DEFAULT_PP_COVARIANCE_FLOOR,
+    PP_GAUSSIAN_ESTIMATOR,
+)
 
 pd.set_option('display.max_columns', None)
 
@@ -64,9 +72,58 @@ parser.add_argument("--x_save_value", default=0, type=int)
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
-args = parser.parse_args()
-if args.save_directory is None:
-    args.save_directory = args.model_name.rsplit("/", 1)[-1]
+parser.add_argument("--plot", default=1, type=int, help="Save the 1D total-uncertainty decomposition plot during the run. Default 1.")
+parser.add_argument(
+    "--resume",
+    default=0,
+    type=int,
+    help="Skip x-slices whose result CSV already exists and continue from the first missing slice.",
+)
+parser.add_argument(
+    "--va_method",
+    default="vanilla",
+    type=str,
+    choices=("vanilla", "parallel_pf", "parallel_pp", "parallel", "parallel_hybrid"),
+    help=(
+        "Va estimator: vanilla (forward factorization), parallel_pf (joint-canvas "
+        "samples scored by the forward conditional Gaussian), parallel_pp (joint-Gaussian "
+        "conditional entropy with no forward scoring), parallel (legacy PF alias), or "
+        "parallel_hybrid (parallel u with conditional entropy of sequential y|u)."
+    ),
+)
+parser.add_argument(
+    "--num_joint_samples",
+    default=10,
+    type=int,
+    help="Number of paired (u, y) denoising samples used by parallel regression.",
+)
+parser.add_argument(
+    "--num_masks_per_slot",
+    default=8,
+    type=int,
+    help="Fallback mask tokens per numeric slot if D-label inference is unavailable.",
+)
+parser.add_argument(
+    "--pp_covariance_floor", type=float, default=DEFAULT_PP_COVARIANCE_FLOOR,
+    help="Regression PP only: absolute eigenvalue floor for the fitted joint covariance "
+         "(output-squared units). Default 1e-6; 0 rejects singular fits. Saved in results.",
+)
+args = None
+
+
+def parse_args(argv=None):
+    global args
+    args = parser.parse_args(argv)
+    save_directory_was_default = args.save_directory is None
+    if args.save_directory is None:
+        args.save_directory = args.model_name.rsplit("/", 1)[-1]
+    if args.va_method != "vanilla" and save_directory_was_default:
+        args.save_directory = f"{str(args.save_directory).rstrip('/')}/va_{args.va_method}"
+    save_dir = str(args.save_directory).rstrip("/")
+    seed_dir = f"seed_{args.icl_sample_seed}"
+    if not save_dir.endswith(seed_dir):
+        args.save_directory = f"{save_dir}/{seed_dir}"
+    return args
 
 @dataclass
 class ToyRegressionExperimentConfig:
@@ -109,6 +166,154 @@ class ToyRegressionExperimentConfig:
     num_api_calls_save_value: int
     
     verbose_output: int
+    plot: int
+    resume: int
+    va_method: str
+    num_joint_samples: int
+    num_masks_per_slot: int
+    pp_covariance_floor: float = DEFAULT_PP_COVARIANCE_FLOOR
+
+
+def pp_run_config_json(config):
+    """Record settings that affect sampling/fitting; allow display/resume changes."""
+    ignored = {"resume", "plot", "verbose_output", "save_directory", "num_api_calls_save_value"}
+    return json.dumps({k: v for k, v in vars(config).items() if k not in ignored}, sort_keys=True)
+
+
+def validate_pp_result_directory(output_dir, config):
+    """Reject mixed PP results before even overwriting the saved demonstrations."""
+    current_pp = config.va_method == "parallel_pp"
+    for path in sorted(Path(output_dir).glob("results_*.csv")):
+        if path.stat().st_size == 0:
+            continue
+        rows = pd.read_csv(path)
+        saved_pp = "va_method" in rows and rows["va_method"].eq("parallel_pp").any()
+        if not current_pp and not saved_pp:
+            continue
+        if not current_pp or rows.empty or "va_method" not in rows or not rows["va_method"].eq("parallel_pp").all():
+            raise ValueError(f"Cannot mix parallel_pp with other regression results in {path.parent}; "
+                             "use a separate --save_directory")
+        expected = {
+            "parallel_joint_estimator": PP_GAUSSIAN_ESTIMATOR,
+            "parallel_pp_run_config_json": pp_run_config_json(config),
+        }
+        for key, value in expected.items():
+            if key not in rows or not rows[key].eq(value).all():
+                raise ValueError(f"Parallel PP settings/estimator mismatch in {path} ({key}); "
+                                 "use a separate --save_directory")
+
+def save_toy_regression_plots(output_dir: str, run_name: str) -> list[str]:
+    """Save the total-uncertainty plot using the code in eval/eval_toy_1d_reg.ipynb."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from csaps import csaps
+
+    eval_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "eval")
+    if eval_dir not in sys.path:
+        sys.path.insert(0, eval_dir)
+    from notebook_utils import set_plot_style
+
+    set_plot_style()
+
+    results_directory = output_dir if output_dir.endswith(os.sep) else output_dir + os.sep
+
+    D_data = None
+    for filename in os.listdir(results_directory):
+        if filename.startswith("D_") and filename.endswith(".csv"):
+            D_data = pd.read_csv(results_directory + filename)
+            break
+
+    if D_data is None:
+        print(f"Skipping plot: missing ICL file in {output_dir}")
+        return []
+
+    feature_column = ToyRegressionUtils.get_feature_columns(D_data)[0]
+    x_col = f"x_{feature_column}"
+
+    df_list = []
+    for filename in os.listdir(results_directory):
+        if filename.startswith("results_") and filename.endswith(".csv"):
+            df_list.append(pd.read_csv(results_directory + filename))
+
+    if not df_list:
+        print(f"Skipping plot: no results_*.csv files in {output_dir}")
+        return []
+
+    rows = []
+    for z_df in df_list:
+        z_df = calculate_min_Va_by_KL_rank(z_df, num_valid_Va=5, forward_kl=True, upper_bound_by_total_U=True)
+        try:
+            rows.append({
+                x_col: float(z_df[x_col].values[0]),
+                "total_uncertainty": float(z_df["H[p(y|x,D)]"].values[0]),
+                "min_Va": float(z_df["min_Va"].values[0]),
+            })
+        except Exception:
+            continue
+
+    if not rows:
+        print(f"Skipping plot: no valid result rows in {output_dir}")
+        return []
+
+    results_df = pd.DataFrame(rows).sort_values(by=x_col)
+    valid_h = np.isfinite(results_df["total_uncertainty"])
+    valid_va = np.isfinite(results_df["min_Va"])
+    if valid_h.sum() < 1:
+        print(f"Skipping plot: no finite H[p(y|x,D)] in {output_dir}")
+        return []
+
+    fig, ax = plt.subplots(figsize=(10.5, 5.5))
+    plt.scatter(
+        results_df.loc[valid_h, x_col],
+        results_df.loc[valid_h, "total_uncertainty"],
+        color="C0",
+        alpha=0.4,
+    )
+    if valid_va.any():
+        plt.scatter(
+            results_df.loc[valid_va, x_col],
+            results_df.loc[valid_va, "min_Va"],
+            color="C1",
+            alpha=0.4,
+        )
+
+    x_min = float(results_df[x_col].min())
+    x_max = float(results_df[x_col].max())
+    if x_max > x_min:
+        x_grid = np.linspace(x_min, x_max, 100)
+        if valid_h.sum() >= 2:
+            y_total = csaps(
+                results_df.loc[valid_h, x_col],
+                results_df.loc[valid_h, "total_uncertainty"],
+                smooth=0.85,
+            )
+            plt.plot(x_grid, y_total(x_grid), color="C0", linewidth=3, label="Total Uncertainty")
+        if valid_va.sum() >= 2:
+            y_min_va = csaps(
+                results_df.loc[valid_va, x_col],
+                results_df.loc[valid_va, "min_Va"],
+                smooth=0.85,
+            )
+            plt.plot(x_grid, y_min_va(x_grid), color="C1", linewidth=3, label="Aleatoric Uncertainty")
+    elif valid_h.any():
+        plt.plot([], [], color="C0", linewidth=3, label="Total Uncertainty")
+
+    label_seen = False
+    for _, row in D_data.iterrows():
+        label_string = "ICL Data" if not label_seen else None
+        label_seen = True
+        plt.axvline(x=row[feature_column], color="C5", linestyle="--", alpha=0.5, linewidth=3, label=label_string)
+
+    plt.title("Total Uncertainty Decomposition: Toy Regression")
+    plt.ylabel("Uncertainty")
+    plt.xlabel(r"Test Covariate $x$")
+    plt.legend(framealpha=0.75)
+
+    plot_path = os.path.join(output_dir, f"plot_entropy_decomposition_{run_name}.png")
+    fig.savefig(plot_path, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return [plot_path]
 
 class ToyRegressionExperiment:
     def __init__(self, config: ToyRegressionExperimentConfig):
@@ -116,14 +321,22 @@ class ToyRegressionExperiment:
         
         np.random.seed(self.config.numpy_seed)
 
-        self.prompter = ToyRegressionPrompt()
+        self.prompter = ToyRegressionPrompt(model_name=self.config.model_name)
         
         if self.config.num_bo_z > self.config.num_z:
             raise ValueError("Number of bo z values cannot be greater than number of z values.")
 
+        self.va_estimator = get_regression_va_estimator(
+            self.config.va_method,
+            self.config.num_joint_samples,
+            self.config.num_masks_per_slot,
+            self.config.pp_covariance_floor,
+        )
+        output_dir = f"results/toy_regression/{self.config.dataset_name}/{self.config.save_directory}"
+        validate_pp_result_directory(output_dir, self.config)
         self.data_preprocessing()
-        
         self.num_api_calls = self.config.num_api_calls_save_value
+        print(f"Va estimator: {self.va_estimator.name}")
 
     def data_preprocessing(self):
         self.data_path = f'datasets_toy_regression/{self.config.dataset_name}'
@@ -157,9 +370,9 @@ class ToyRegressionExperiment:
 
         self.D_note_label_df = D_rows[['note', 'label']]
 
-        if not os.path.exists(f"results/{self.config.dataset_name}/{self.config.save_directory}"):
-            os.makedirs(f"results/{self.config.dataset_name}/{self.config.save_directory}")
-        D_rows.to_csv(f"results/{self.config.dataset_name}/{self.config.save_directory}/D_{self.config.run_name}.csv", index=False)
+        output_dir = f"results/toy_regression/{self.config.dataset_name}/{self.config.save_directory}"
+        os.makedirs(output_dir, exist_ok=True)
+        D_rows.to_csv(f"{output_dir}/D_{self.config.run_name}.csv", index=False)
         
         self.max_D_label = D_rows['label'].max()
         self.min_D_label = D_rows['label'].min()
@@ -330,86 +543,86 @@ class ToyRegressionExperiment:
             row = self.z_data.iloc[i]
             
             z = row['note']
-            
-            # Compute p(u|z,D)
-            _, u_samples = self.calculate_gaussian(z, "p(u|z,D)", icl_z_note=z)
-                        
-            # Compute p(y|x,u,z,D)
-            pyxuz_distributions: list[GaussianDistribution] = []
-            Hyxuz = []
-            stds = []
-            variances = []
-            for u_sample in u_samples:
-                pyxuz_gaussian, _ = self.calculate_gaussian(x, "p(y|x,u,z,D)", icl_z_note=z, icl_u_label=u_sample)
-                Hyxuz.append(pyxuz_gaussian.entropy)
-                stds.append(pyxuz_gaussian.std)
-                variances.append(pyxuz_gaussian.std**2)
-                pyxuz_distributions.append(pyxuz_gaussian)
-                
-            # Approximate p(y|x,z,D) samples
-            pyxuz_samples = []
-            for _ in range(100):
-                u_sample = np.random.randint(len(u_samples))   
-                pyxuz_sample = pyxuz_distributions[u_sample].sample()    
-                pyxuz_samples.append(pyxuz_sample)        
-            pyxz_gaussian = ToyRegressionUtils.gaussian_from_samples(pyxuz_samples)
-                            
-            # Entropy
-            Hyxz = np.mean(Hyxuz)
-            yxz_variance = np.mean(variances)
-            yxz_std = np.mean(stds)
-            Va = np.round(Hyxz, 5)
-            Ve = Hyx - Va
-            Va_variance = np.round(yxz_variance, 5)
-            Ve_variance = np.round(total_variance - Va_variance, 5)
-            
-            # KL Divergence
-            kl_pyx_pyxz = ToyRegressionUtils.calculate_kl_divergence(pyx_gaussian, pyxz_gaussian)
-            kl_pyxz_pyx = ToyRegressionUtils.calculate_kl_divergence(pyxz_gaussian, pyx_gaussian)
-            
-            self.z_BO_maximisation_objective.append(-Va - kl_pyx_pyxz)
-        
-            # Save            
+
+            z_fields = self.va_estimator.estimate(
+                self, x, z, pyx_gaussian, Hyx, total_variance
+            )
+            self.z_BO_maximisation_objective.append(-z_fields["Va"] - z_fields["kl_pyx_pyxz"])
+
             save_dict = {f"z_{feature}": row[feature] for feature in self.feature_columns}
             save_dict["z_note"] = z
             save_dict_x = {f"x_{feature}": self.x_row.iloc[x_idx][feature] for feature in self.feature_columns}
             save_dict_x["x_note"] = x
             save_dict = {**save_dict, **save_dict_x}
-            
-            save_dict[f"p(y|x,D)_mean"] = pyx_gaussian.mean
-            save_dict[f"p(y|x,D)_std"] = pyx_gaussian.std
-            save_dict[f"p(y|x,z,D)_mean"] = pyxz_gaussian.mean
-            save_dict[f"p(y|x,z,D)_std"] = pyxz_gaussian.std
+            save_dict["p(y|x,D)_mean"] = pyx_gaussian.mean
+            save_dict["p(y|x,D)_std"] = pyx_gaussian.std
             save_dict["H[p(y|x,D)]"] = Hyx
             save_dict["Var[y|x,D]"] = total_variance
-            save_dict["Va"] = Va
-            save_dict["Ve"] = Ve
-            save_dict["Va_variance"] = Va_variance
-            save_dict["Ve_variance"] = Ve_variance
-            save_dict["yxz_std"] = yxz_std
-            save_dict["kl_pyx_pyxz"] = kl_pyx_pyxz
-            save_dict["kl_pyxz_pyx"] = kl_pyxz_pyx
+            save_dict.update(z_fields)
+            if self.va_estimator.name == "parallel_pp":
+                save_dict["parallel_pp_run_config_json"] = pp_run_config_json(self.config)
             save_dict["api_calls"] = self.num_api_calls
-            
             save_dict_list.append(save_dict)
             
         save_df = pd.DataFrame(save_dict_list)
         
         return save_df
             
+    def _x_csv_path(self, output_dir: str, x_idx: int) -> str:
+        return f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv"
+
+    def _resume_from_existing(self, output_dir: str) -> None:
+        if not self.config.resume:
+            return
+        last_idx = None
+        n_skip = 0
+        for x_idx in range(self.num_x_values):
+            path = self._x_csv_path(output_dir, x_idx)
+            if os.path.isfile(path) and os.path.getsize(path) > 0:
+                last_idx = x_idx
+                n_skip += 1
+        if last_idx is None:
+            print("Resume: no existing x-slices found, starting from the beginning.")
+            return
+        last_path = self._x_csv_path(output_dir, last_idx)
+        last_df = pd.read_csv(last_path)
+        if "api_calls" in last_df.columns and len(last_df):
+            self.num_api_calls = int(last_df["api_calls"].iloc[-1])
+        print(
+            f"Resume: skipping {n_skip}/{self.num_x_values} existing x-slices "
+            f"(last kept x{last_idx + self.config.x_save_value}, api_calls={self.num_api_calls})."
+        )
+
     def run_experiment(self):
         output_dir = f"results/toy_regression/{self.config.dataset_name}/{self.config.save_directory}"
         os.makedirs(output_dir, exist_ok=True)
+        self._resume_from_existing(output_dir)
+        feature_column = self.feature_columns[0]
         for x_idx in range(self.num_x_values):
+            csv_path = self._x_csv_path(output_dir, x_idx)
+            if self.config.resume and os.path.isfile(csv_path) and os.path.getsize(csv_path) > 0:
+                continue
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv", index=False)
+            save_df.to_csv(csv_path, index=False)
+            if self.config.plot:
+                x_val = float(self.x_row.iloc[x_idx][feature_column])
+                at_checkpoint = abs(x_val / 5.0 - round(x_val / 5.0)) < 1e-6
+                at_end = x_idx == self.num_x_values - 1
+                if at_checkpoint or at_end:
+                    try:
+                        plot_paths = save_toy_regression_plots(output_dir, self.config.run_name)
+                    except Exception as exc:
+                        print(f"Skipping plot refresh at x={x_val}: {exc}")
+                    else:
+                        for path in plot_paths:
+                            print(f"Saved plot at x={x_val}: {path}")
         
-def main():
+def main(argv=None):
+    parse_args(argv)
     config = ToyRegressionExperimentConfig(**vars(args))
-    
     experiment = ToyRegressionExperiment(config)
-    
     experiment.run_experiment()
+
 
 if __name__ == "__main__":
     main()

@@ -133,7 +133,8 @@ def default_output_path(input_path: Path) -> Path:
     return input_path.with_name(f"abstention_{stem}.csv")
 
 
-def main(args: argparse.Namespace) -> None:
+def main(argv=None) -> None:
+    args = build_parser().parse_args(argv)
     input_path = Path(args.input)
     output_path = (
         Path(args.output)
@@ -162,12 +163,12 @@ def main(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Compute QA abstention metrics from existing run_qa.py results."
+        description="Compute QA abstention metrics from existing run.py qa results."
     )
     parser.add_argument(
         "--input",
         required=True,
-        help="Path to an ID-only or mixed ID/OOD result CSV from run_qa.py.",
+        help="Path to an ID-only or mixed ID/OOD result CSV from run.py qa.",
     )
     parser.add_argument(
         "--output",
@@ -192,4 +193,4 @@ def build_parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     pd.set_option("display.max_columns", None)
-    main(build_parser().parse_args())
+    main()

@@ -36,7 +36,13 @@ parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
 
-args = parser.parse_args()
+args = None
+
+
+def parse_args(argv=None):
+    global args
+    args = parser.parse_args(argv)
+    return args
 
 @dataclass
 class BanditClassificationBenchmarkExperimentConfig:
@@ -229,12 +235,12 @@ class BanditClassificationBenchmarkExperiment:
             
         print(f"\nTotal API calls: {self.num_api_calls}")
         
-def main():
+def main(argv=None):
+    parse_args(argv)
     config = BanditClassificationBenchmarkExperimentConfig(**vars(args))
-    
     experiment = BanditClassificationBenchmarkExperiment(config)
-    
     experiment.run_experiment()
+
 
 if __name__ == "__main__":
     main()

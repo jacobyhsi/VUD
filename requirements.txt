@@ -1,11 +1,14 @@
-vllm
+vllm>=0.24.0
 flashinfer-python
 accelerate
-pandas 
+pandas
+matplotlib
+csaps
+SciencePlots
 datasets==2.18.0
 scikit-learn
 botorch
-transformers==4.46.3
+transformers>=5.11.0
 torch
 
 # for pubmedqa, datasets==4.0.0

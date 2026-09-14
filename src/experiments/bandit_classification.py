@@ -59,7 +59,13 @@ parser.add_argument("--save_directory", default="other")
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
-args = parser.parse_args()
+args = None
+
+
+def parse_args(argv=None):
+    global args
+    args = parser.parse_args(argv)
+    return args
 
 @dataclass
 class BanditClassificationExperimentConfig:
@@ -103,7 +109,7 @@ class BanditClassificationExperiment:
         
         self.rng = np.random.default_rng(self.config.numpy_seed)
 
-        self.prompter = BanditClassificationPrompt()
+        self.prompter = BanditClassificationPrompt(model_name=self.config.model_name)
         
         self.create_bandit()
         
@@ -446,12 +452,12 @@ class BanditClassificationExperiment:
             
         print(f"\nTotal API calls: {self.num_api_calls}")
         
-def main():
+def main(argv=None):
+    parse_args(argv)
     config = BanditClassificationExperimentConfig(**vars(args))
-    
     experiment = BanditClassificationExperiment(config)
-    
     experiment.run_experiment()
+
 
 if __name__ == "__main__":
     main()

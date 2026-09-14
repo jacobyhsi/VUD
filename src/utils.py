@@ -238,6 +238,11 @@ class GaussianDistribution:
     
     def pdf(self, x: float):
         return stats.norm.pdf(x, loc=self.mean, scale=self.std)
+
+    def logpdf(self, y: float) -> float:
+        if not np.isfinite(self.std) or self.std <= 0:
+            return float("-inf")
+        return float(stats.norm.logpdf(y, loc=self.mean, scale=self.std))
     
     def sample(self, size: Optional[int] = None):
         return np.random.normal(loc=self.mean, scale=self.std, size=size)
@@ -342,6 +347,9 @@ class QAUtils:
                         port=port,
                     )
                     match = re.search(r"<rep>(.*?)</rep>", response, flags=re.DOTALL | re.IGNORECASE)
+                    if match is None:
+                        # Diffusion often hits max_new_tokens before </rep>.
+                        match = re.search(r"<rep>(.*)", response, flags=re.DOTALL | re.IGNORECASE)
 
                     if match:
                         note = match.group(1).strip().lower()

@@ -1,15 +1,62 @@
+import os
 import re
 import argparse
+
 import pandas as pd
-import os
 from tqdm import tqdm
+
 from src.dataset import QADataset
 from src.prompt import Prompt
 from src.chat import chat_qa
 from src.utils import calculate_entropy, calculate_kl_divergence, QAUtils
+from src.parallel.qa_parallel import (
+    estimate_parallel_qa, parallel_output_dir, validate_parallel_args,
+    validate_parallel_checkpoint,
+)
 
 # Main
-def main():
+args = None
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(description="Run VUD")
+    parser.add_argument("--seed", type=int, default=123)
+    dataset_choices = ["boolqa", "hotpotqa", "pubmedqa", "mmlu", "mmlu_cs", "mmlu_moral"]
+    parser.add_argument("--id", choices=dataset_choices, default="mmlu")
+    parser.add_argument(
+        "--ood",
+        choices=dataset_choices,
+        default=None,
+        help="Optional OOD dataset. If omitted, evaluate only the complete ID test set.",
+    )
+    parser.add_argument("--num_seeds", type=int, default=5)
+    parser.add_argument(
+        "--va_method", choices=["vanilla", "parallel_pf", "parallel_pp", "parallel"], default="vanilla",
+        help="Dream only: parallel_pf uses forward scores; parallel_pp uses joint counts. parallel is a legacy PF alias.",
+    )
+    parser.add_argument(
+        "--num_joint_samples", type=int, default=100,
+        help="Total joint draws per z for parallel, cycling through --num_seeds permutations.",
+    )
+    parser.add_argument("--model", default="Qwen/Qwen2.5-14B")
+    parser.add_argument("--host", default="localhost")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--resume", action="store_true", help="Resume from the existing result CSV and discard invalid trailing rows.")
+    return parser
+
+
+def parse_args(argv=None):
+    global args
+    args = build_parser().parse_args(argv)
+    return args
+
+
+def main(argv=None):
+    global args
+    if argv is not None or args is None:
+        parse_args(argv)
+    if args.va_method != "vanilla":
+        validate_parallel_args(args)
     global_seed = args.seed
     qa = QADataset(args.id, args.ood, seed=global_seed)
     if args.ood is None:
@@ -48,9 +95,11 @@ def main():
         data_x = pd.DataFrame([row[1] for row in interleaved_rows]).reset_index(drop=True)
     num_x = len(data_x)
 
-    prompt = Prompt(prompt_type="qa")
+    prompt = Prompt(prompt_type="qa", model_name=args.model)
 
     output_dir = f"results/qa/{args.model.rsplit('/', 1)[-1]}"
+    if args.va_method != "vanilla":
+        output_dir = parallel_output_dir(args)
     if args.ood is None:
         output_path = f"{output_dir}/df_{args.id}_ID_{num_x}x_{num_z}z_{num_D}ICL.csv"
     else:
@@ -60,6 +109,8 @@ def main():
     start_index = 0
     if args.resume and os.path.exists(output_path):
         existing_results = pd.read_csv(output_path)
+        if args.va_method != "vanilla":
+            validate_parallel_checkpoint(existing_results, args)
         invalid_rows = existing_results[["TU", "Va", "Ve"]].isna().any(axis=1)
         if invalid_rows.any():
             first_invalid = invalid_rows[invalid_rows].index[0]
@@ -104,6 +155,14 @@ def main():
             host=args.host,
             port=args.port,
         )
+        if args.va_method != "vanilla":
+            x_z = estimate_parallel_qa(
+                x_row, data_z, df_D, prompt, label_keys, args, x_index=i,
+            )
+            results.append(pd.DataFrame([x_z]))
+            os.makedirs(output_dir, exist_ok=True)
+            pd.concat(results, ignore_index=True).to_csv(output_path, index=False)
+            continue
         data_z["puzD"] = None
         data_z["pyxuzD"] = None
 
@@ -158,8 +217,8 @@ def main():
                 skip_seed = False
                 dict_uz = {}
                 for label_key in label_keys:
-                    df_copy = df_z.copy()
-                    df_copy["label"] = label_key
+                    # Pair u with the same perturbed z used for p(u|z,D).
+                    df_copy = pd.DataFrame([{"note": z, "label": label_key}])
                     dict_uz[f"u{label_key}z"] = df_copy
 
                 dict_uzD = {}
@@ -296,23 +355,7 @@ def main():
         os.makedirs(output_dir, exist_ok=True)
         df_results.to_csv(output_path, index=False)
 
+
 if __name__ == "__main__":
-    # Argument Parser
-    pd.set_option('display.max_columns', None)
-    parser = argparse.ArgumentParser(description='Run VUD')
-    parser.add_argument("--seed", type=int, default=123)
-    dataset_choices = ["boolqa", "hotpotqa", "pubmedqa", "mmlu", "mmlu_cs", "mmlu_moral"]
-    parser.add_argument("--id", choices=dataset_choices, default="mmlu")
-    parser.add_argument(
-        "--ood",
-        choices=dataset_choices,
-        default=None,
-        help="Optional OOD dataset. If omitted, evaluate only the complete ID test set.",
-    )
-    parser.add_argument("--num_seeds", type=int, default=5)
-    parser.add_argument("--model", default="Qwen/Qwen2.5-14B")
-    parser.add_argument("--host", default="localhost")
-    parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--resume", action="store_true", help="Resume from the existing result CSV and discard invalid trailing rows.")
-    args = parser.parse_args()
+    pd.set_option("display.max_columns", None)
     main()
