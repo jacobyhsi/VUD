@@ -204,3 +204,4 @@ tests/
 slurm.sh
 
 results/
+tmp/

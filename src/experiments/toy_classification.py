@@ -28,13 +28,25 @@ parser.add_argument("--is_local_client", default=1, type=int)
 
 """Dataset Configuration"""
 parser.add_argument("--dataset_name", default="logistic_regression")
-parser.add_argument("--D_size", default=15, type=int)
+parser.add_argument(
+    "--D_size",
+    default=None,
+    type=int,
+    help="ICL context size. Default 15, or 200 when --dataset_name is spirals.",
+)
 
 """X Configuration"""
 parser.add_argument("--x_row_method",type=str, default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
-parser.add_argument("--x_range", default="{'x1': [-12, 12, 0.2]}")
+parser.add_argument(
+    "--x_range",
+    default=None,
+    help=(
+        "Evaluation grid as a dict string of [start, end, step] per feature. "
+        "Default {'x1': [-12, 12, 0.2]}. Spirals defaults to x1 and x2 on [-4, 4) with step 0.1."
+    ),
+)
 parser.add_argument("--x_sample_seed", default=0, type=int)
 parser.add_argument("--decimal_places", default=1, type=int)
 
@@ -90,9 +102,25 @@ parser.add_argument(
 args = None
 
 
+DEFAULT_D_SIZE = 15
+DEFAULT_X_RANGE = "{'x1': [-12, 12, 0.2]}"
+SPIRALS_D_SIZE = 200
+SPIRALS_X_RANGE = "{'x1': [-4, 4, 0.1], 'x2': [-4, 4, 0.1]}"
+
+
 def parse_args(argv=None):
     global args
     args = parser.parse_args(argv)
+    if args.dataset_name == "spirals":
+        if args.D_size is None:
+            args.D_size = SPIRALS_D_SIZE
+        if args.x_range is None:
+            args.x_range = SPIRALS_X_RANGE
+    else:
+        if args.D_size is None:
+            args.D_size = DEFAULT_D_SIZE
+        if args.x_range is None:
+            args.x_range = DEFAULT_X_RANGE
     save_directory_was_default = args.save_directory is None
     if args.save_directory is None:
         args.save_directory = args.model_name.rsplit("/", 1)[-1]
