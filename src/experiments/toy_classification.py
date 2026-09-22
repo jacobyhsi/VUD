@@ -150,7 +150,7 @@ def save_toy_classification_plots(output_dir: str, run_name: str) -> list[str]:
     import matplotlib.pyplot as plt
     from csaps import csaps
 
-    eval_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "eval")
+    eval_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "eval"))
     if eval_dir not in sys.path:
         sys.path.insert(0, eval_dir)
     from notebook_utils import set_plot_style
@@ -249,7 +249,7 @@ def save_toy_classification_plots(output_dir: str, run_name: str) -> list[str]:
         data[key] = data[key][:num_Va]
 
     results_df = pd.DataFrame(data)
-    results_df = results_df.sort_values(by="x_x1")
+    results_df = results_df.sort_values(by=f"x_{feature_column}")
 
     fig, ax = plt.subplots(figsize=(12, 6.5))
     plt.scatter(results_df[f"x_{feature_column}"], results_df["total_uncertainty"], color="C0", alpha=0.4)

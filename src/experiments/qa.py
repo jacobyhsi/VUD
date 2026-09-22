@@ -97,7 +97,7 @@ def main(argv=None):
 
     prompt = Prompt(prompt_type="qa", model_name=args.model)
 
-    output_dir = f"results/qa/{args.model.rsplit('/', 1)[-1]}"
+    output_dir = f"results/qa/{args.model.rsplit('/', 1)[-1]}/va_vanilla"
     if args.va_method != "vanilla":
         output_dir = parallel_output_dir(args)
     if args.ood is None:

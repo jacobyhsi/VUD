@@ -313,7 +313,7 @@ class QAUtils:
         perturbed_rows = []
         for idx, z_row in tqdm(z_base.iterrows(), total=len(z_base), desc="Processing z perturbations"):
 
-            if dataname == "mmlu":
+            if dataname in {"mmlu", "mmlu_cs", "mmlu_moral"}:
                 prompt = (
                     "/nothink Please rephrase the following:\n\n"
                     f"{z_row['note']}\n\n"

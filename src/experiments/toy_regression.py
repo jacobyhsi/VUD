@@ -62,8 +62,8 @@ parser.add_argument("--num_bo_z", default=0, type=int) # Bayesian Optimisation P
 parser.add_argument("--num_candidates", default=3, type=int) # Bayesian Optimisation Params
 
 """Distribution Approximation Configuration"""
-parser.add_argument("--num_outlier_pairs_to_remove", default=0, type=int)
-parser.add_argument("--std_method", default="default", type=str)
+parser.add_argument("--num_outlier_pairs_to_remove", default=1, type=int)
+parser.add_argument("--std_method", default="iqr", type=str)
 
 """Save Configuration"""
 parser.add_argument("--run_name", default="test")
@@ -209,7 +209,7 @@ def save_toy_regression_plots(output_dir: str, run_name: str) -> list[str]:
     import matplotlib.pyplot as plt
     from csaps import csaps
 
-    eval_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "eval")
+    eval_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "eval"))
     if eval_dir not in sys.path:
         sys.path.insert(0, eval_dir)
     from notebook_utils import set_plot_style
