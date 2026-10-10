@@ -1,0 +1,841 @@
+is_ood,TU,Va,Ve,true_label,pred_label,x_note
+0,1.02364,1.021138838506639,0.0025011614933612,0,0,"Question: Each student that enrolls at a school is assigned a unique ID number, which is stored as a binary number. The ID numbers increase sequentially by 1 with each newly enrolled student. If the ID number assigned to the last student who enrolled was the binary number 1001 0011, what binary number will be assigned to the next student who enrolls?
+Choices:
+0: 1001 0100
+1: 1001 0111
+2: 1101 0100
+3: 1101 0111"
+0,1.3936,1.413596423157826,-0.019996423157826,3,0,"Question: Statement 1| The maximum margin decision boundaries that support vector machines construct have the lowest generalization error among all linear classifiers. Statement 2| Any decision boundary that we get from a generative model with classconditional Gaussian distributions could in principle be reproduced with an SVM and a polynomial kernel of degree less than or equal to three.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.8119,1.7873571073625236,0.0245428926374764,1,0,"Question: Suppose Unix did not provide a way of passing file descriptors between processes, but still allowed inheriting file descriptors from a parent on fork and exec. What aspects of the OKWS design would break without file descriptor passing?
+1. It would be impossible for services to send messages to oklogd.
+2. It would be impossible for services to get a TCP connection to a database proxy.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.22794,1.2643813836413622,-0.0364413836413621,1,3,"Question: You are training a linear regression model for a simple estimation task, and notice that the model is overfitting to the data. You decide to add in $\ell_2$ regularization to penalize the weights. As you increase the $\ell_2$ regularization coefficient, what will happen to the bias and variance of the model?
+Choices:
+0: Bias increase ; Variance increase
+1: Bias increase ; Variance decrease
+2: Bias decrease ; Variance increase
+3: Bias decrease ; Variance decrease"
+0,1.87963,1.8656894393861292,0.0139405606138705,1,1,"Question: In the NoNicks operating system, the time required by a single file-read operation has four nonoverlapping components:
+disk seek time-25 msec
+disk latency time-8 msec
+disk transfer time- 1 msec per 1,000 bytes
+operating system overhead-1 msec per 1,000 bytes + 10 msec
+In version 1 of the system, the file read retrieved blocks of 1,000 bytes. In version 2, the file read (along with the underlying layout on disk) was modified to retrieve blocks of 4,000 bytes. The ratio of-the time required to read a large file under version 2 to the time required to read the same large file under version 1 is approximately
+Choices:
+0: 1:4
+1: 1:3.5
+2: 1:1
+3: 1.1:1"
+0,1.59172,1.4491340753295274,0.1425859246704726,2,0,"Question: What is the dimensionality of the null space of the following matrix? A = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+Choices:
+0: 0
+1: 1
+2: 2
+3: 3"
+0,1.34027,1.288405575774461,0.051864424225539,3,3,"Question: Two computers are built by different manufacturers. One is running a Web server and the other is running a Web browser. Which of the following best describes the ability of the two computers to communicate with each other across the Internet?
+Choices:
+0: The computers cannot communicate because different manufacturers use different communication protocols.
+1: The computers can communicate, but additional hardware is needed to convert data packets from one computer's protocol to the other computer's protocol.
+2: The computers can communicate directly only if the messages consist of text; other formats cannot be interpreted across computers.
+3: The computers can communicate directly because Internet communication uses standard protocols."
+0,1.82276,1.794298517198637,0.0284614828013629,0,1,"Question: A sorted list of numbers contains 500 elements. Which of the following is closest to the maximum number of list elements that will be examined when performing a binary search for a value in the list?
+Choices:
+0: 10
+1: 50
+2: 250
+3: 500"
+0,1.93136,1.9282720696876945,0.0030879303123054,0,2,"Question: Array A contains 256 elements of 4 bytes each. Its first element is stored at physical address 4,096.
+Array B contains 512 elements of 4 bytes each. Its first element is stored at physical address 8,192.
+Assume that only arrays A and B can be cached in an initially empty, physically addressed, physically tagged, direct-mapped, 2K-byte cache with an 8-byte block size. The following loop is then executed.
+for (i = 0; i < 256; i++)
+        A[i] = A[i] + B[2*i];
+During the execution of the loop, how many bytes will be written to memory if the cache has a write-back policy?
+Choices:
+0: 0
+1: 256
+2: 1024
+3: 2000"
+0,1.8822,1.9146423532193155,-0.0324423532193152,0,0,"Question: Statement 1| The BLEU metric uses precision, while the ROGUE metric uses recall. Statement 2| Hidden markov models were frequently used to model English sentences.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.14805,1.116538186858818,0.031511813141182,1,1,"Question: What is the value of this python expression: 1 + 3 % 3?
+Choices:
+0: 0
+1: 1
+2: 3
+3: 4"
+0,1.38837,1.3761079000927507,0.0122620999072493,2,0,"Question: Let F: K \times R \to MF:K×R→M be a secure PRF. For m \in Mm∈M define E(k,m) = \big[ r \gets R,\ \text{output } \big(r,\ F(k,r) \oplus m\big)\ \big]E(k,m)=[r←R, output (r, F(k,r)⊕m) ] Is EE symantically secure under CPA?
+Choices:
+0: Yes, whenever F is a secure PRF
+1: No, there is always a CPA attack on this system
+2: Yes, but only if R is large enough so r never repeats (w.h.p)
+3: It depends on what F is used"
+0,1.86534,1.8470976805871728,0.0182423194128273,3,1,"Question: An algorithm will be used to identify the maximum value in a list of one or more integers. Consider the two versions of the algorithm below.
+
+ Algorithm I :  Set the value of a variable max to -1. Iterate through the list of integer
+   values. If a data value is greater than the value of the variable max, set
+  max to the data value.
+ Algorithm II : Set the value of a variable max to the first data value. Iterate through the
+   remaining values in the list of integers. If a data value is greater than the
+   value of the variable max, set max to the data value.
+
+ Which of the following statements best describes the behavior of the two algorithms?
+Choices:
+0: Both algorithms work correctly on all input values.
+1: Algorithm I always works correctly, but Algorithm II only works correctly when the maximum value is not the first value in the list.
+2: Algorithm II always works correctly, but Algorithm I only works correctly when the maximum value is greater than or equal to -l.
+3: Neither algorithm will correctly identify the maximum value when the input contains both positive and negative input values."
+0,1.52426,1.4482867974381148,0.0759732025618851,1,0,"Question: A large data set contains information about all students majoring in computer science in colleges across the United States. The data set contains the following information about each student.
+   ° The student's gender
+   ° The state in which the student attends college
+   ° The student's grade point average on a 4.0 scale
+
+ Which of the following questions could be answered by analyzing only information in the data set?
+Choices:
+0: Do students majoring in computer science tend to have higher grade point averages than students majoring in other subjects?
+1: How many states have a higher percentage of female computer science majors than male computer science majors attending college in that state?
+2: What percent of students attending college in a certain state are majoring in computer science?
+3: Which college has the highest number of students majoring in computer science?"
+0,0.99681,0.900212786321342,0.0965972136786579,1,1,"Question: Both online newspapers and social media sites are used to distribute information on the Internet. Which of the following best describes an advantage that online newspapers have over social media sites?
+Choices:
+0: The ability to distribute information instantaneously
+1: The ability to provide credibility to the information distributed
+2: The ability to provide information that is widely accessible
+3: The ability to provide media-rich content for low cost"
+0,1.65939,1.6278340754893423,0.0315559245106575,1,1,"Question: Which of the following statements about Naive Bayes is incorrect?
+Choices:
+0: Attributes are equally important.
+1: Attributes are statistically dependent of one another given the class value.
+2: Attributes are statistically independent of one another given the class value.
+3: Attributes can be nominal or numeric"
+0,1.98304,1.946139795437679,0.036900204562321,0,0,"Question: Which of the following is not a sentence that is generated by the grammar A -> BC, B -> x|Bx, C -> B|D, D -> y|Ey, E -> z?
+Choices:
+0: xyz
+1: xy
+2: xxzy
+3: xxxxy"
+0,1.60134,1.5758109071967006,0.0255290928032994,0,0,"Question: Which of the following can only be used when training data are linearly separable?
+Choices:
+0: Linear hard-margin SVM.
+1: Linear Logistic Regression.
+2: Linear Soft margin SVM.
+3: The centroid method."
+0,0.44487,0.4450056440338492,-0.0001356440338492,0,0,"Question: Which of the following does authorization aim to accomplish?
+Choices:
+0: Restrict what operations/data the user can access
+1: Determine if the user is an attacker
+2: Flag the user if he/she misbehaves
+3: Determine who the user is"
+0,1.93784,1.9277403842575849,0.0100996157424151,1,0,"Question: Statement 1| Maximizing the likelihood of logistic regression model yields multiple local optimums. Statement 2| No classifier can do better than a naive Bayes classifier if the distribution of the data is known.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.56348,1.415767114150822,0.1477128858491778,0,0,"Question: A retailer that sells footwear maintains a single database containing records with the following information about each item for sale in the retailer's store.
+
+   ° Item identification number
+   ° Footwear type (sneakers, boots, sandals, etc.)
+   ° Selling price (in dollars)
+   ° Size
+   ° Color
+   ° Quantity available
+
+ Using only the database, which of the following can be determined?
+Choices:
+0: Which items listed in the database are not currently in the store
+1: Which colors are more popular among men than women
+2: Which type of footwear is most popular among adults
+3: The total number of shoes sold in a particular month"
+0,1.22771,1.2534436306303507,-0.0257336306303506,0,0,"Question: Why would a ping sweep be used?
+Choices:
+0: To identify live systems
+1: To locate live systems
+2: To identify open ports
+3: To locate firewalls"
+0,1.78216,1.8133251495218277,-0.0311651495218274,2,2,"Question: At time 0, five jobs are available for execution on a single processor, with service times of 25, 15, 5, 3, and 2 time units. Which of the following is the minimum value of the average completion time of these jobs?
+Choices:
+0: 50
+1: 208/5
+2: 92/5
+3: 10"
+0,1.44985,1.4396402423741672,0.0102097576258328,0,0,"Question: Consider the following list. - Assembly language - Block-based programming language - Logic gate - Machine language Which of the following arranges the list in order from highest level of abstraction to lowest level of abstraction?
+Choices:
+0: Block-based programming language, assembly language, machine language, logic gate
+1: Block-based programming language, machine language, assembly language, logic gate
+2: Block-based programming language, machine language, logic gate, assembly language
+3: Machine language, block-based programming language, assembly language, logic gate"
+0,1.46246,1.4061558719988168,0.0563041280011833,0,0,"Question: A program is expressed in a programming language. Which of the following is true of the program?
+Choices:
+0: The program can also be expressed as binary code, but will be more easily understood by humans when expressed in a higher-level programming language.
+1: The program can also be expressed as binary code, which will reduce the likelihood of errors.
+2: The program cannot be expressed as binary code, because binary code can only be used to represent data.
+3: Some parts of the program can be expressed as binary code, but operations must be expressed using a higher-level programming language."
+0,0.706,0.7177729053169489,-0.0117729053169489,3,0,"Question: _______________ is a popular tool used for network analysis in multiprotocol diverse network.
+Choices:
+0: Snort
+1: SuperScan
+2: Burp Suit
+3: EtterPeak"
+0,0.75786,0.8266868840465694,-0.0688268840465694,0,0,"Question: Which of the following is the most likely data privacy concern of the upgraded system?
+Choices:
+0: Customers’ personal information could be compromised if an unauthorized individual gains access to the call session database.
+1: Storing information in the call session database makes it easy for individuals to trick the system using malicious links.
+2: The system design increases the chance that customers will unknowingly install malware on their devices that will share their data with unauthorized individuals.
+3: The system design makes it easy for unauthorized individuals to acquire customers’ private encryption keys."
+0,1.32737,1.2900964196395126,0.0372735803604873,2,2,"Question: Historically, it has been observed that computer processing speeds tend to double every two years. Which of the following best describes how technology companies can use this observation for planning purposes?
+Choices:
+0: Technology companies can accurately predict the dates when new computing innovations will be available to use.
+1: Technology companies can plan to double the costs of new products each time advances in processing speed occur.
+2: Technology companies can set research and development goals based on anticipated processing speeds.
+3: Technology companies can spend less effort developing new processors because processing speed will always improve at the observed rate."
+0,1.78613,1.7736528661061823,0.0124771338938176,3,3,"Question: A new bank plans to make customer convenience a priority by minimizing the amount of time a customer waits in line. The bank is considering two options: a single line where the customer at the front waits for the next available teller, or separate lines for each teller. The bank decides to use a computer simulation of these two options to determine the average wait time for customers. Which of the following is NOT true about the bank's plan?
+Choices:
+0: The bank can incorporate other factors, such as the number of tellers, in the simulation.
+1: The bank can use the simulation to investigate these two options without causing inconvenience for customers.
+2: The bank may consider new alternatives based on the simulation results.
+3: The simulation will not produce usable results because actual customer data are not available."
+0,1.7473,1.717802478327304,0.029497521672696,0,1,"Question: If a, b, and c are integers, which of the following conditions is sufficient to guarantee that the expression a < c || a < b && !(a == c) evaluates to true?
+Choices:
+0: a < c
+1: a < b
+2: a > b
+3: a == b"
+0,1.87708,1.834762579943836,0.0423174200561644,1,1,"Question: Statement 1| The ID3 algorithm is guaranteed to find the optimal decision tree. Statement 2| Consider a continuous probability distribution with density f() that is nonzero everywhere. The probability of a value x is equal to f(x).
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.94329,1.9303252515318243,0.0129647484681754,2,1,"Question: This question is based on the following declarations: String strA = ""CARROT"", strB = ""Carrot"", strC = ""car""; Given that all uppercase letters precede all lowercase letters when considering alphabetical order, which is true?
+Choices:
+0: strA.compareTo(strB) < 0 && strB.compareTo(strC) > 0
+1: strC.compareTo(strB) < 0 && strB.compareTo(strA) < 0
+2: strB.compareTo(strC) < 0 && strB.compareTo(strA) > 0
+3: !(strA.compareTo(strB) == 0) && strB.compareTo(strA) < 0"
+0,0.25018,0.2775546698260307,-0.0273746698260307,0,0,"Question: A sender must not be able to deny sending a message that was sent, is known as
+Choices:
+0: Message Nonrepudiation
+1: Message Integrity
+2: Message Condentiality
+3: Message Sending"
+0,1.86039,1.861505823612213,-0.001115823612213,1,1,"Question: In systems with support for automatic memory management, a garbage collector typically has the responsibility for reclaiming allocated memory objects whose contents cannot affect any future legal computation. Such objects are identified by determining that they cannot be reached from a root set. Which of the following is NOT part of the root set in a typical garbage collector?
+Choices:
+0: Actual parameters of the active procedures
+1: Dynamically allocated objects on the heap
+2: Global variables of the program
+3: Local variables on the call stack"
+0,1.54495,1.0933602152857185,0.4515897847142816,1,1,"Question: The sub key length at each round of DES is__________
+Choices:
+0: 32
+1: 56
+2: 48
+3: 64"
+0,1.93453,1.9446981692741807,-0.010168169274181,1,0,"Question: Statement 1| Since the VC dimension for an SVM with a Radial Base Kernel is infinite, such an SVM must be worse than an SVM with polynomial kernel which has a finite VC dimension. Statement 2| A two layer neural network with linear activation functions is essentially a weighted combination of linear separators, trained on a given dataset; the boosting algorithm built on linear separators also finds a combination of linear separators, therefore these two algorithms will give the same result.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.92707,1.924480925833136,0.0025890741668639,3,2,"Question: For all strings x, the function x^M is defined recursively as follows.
+e^M= e, and
+if w is a string and a is a string with length 1, then
+(aw)^M = aw^Ma.
+Let a be a string with length 1, and let x and y be arbitrary strings. Which of the following is true?
+Choices:
+0: a^M = a
+1: (ax)^M = (xa)^M
+2: (xy)^M = y^Mx^M
+3: None of the above"
+0,1.63757,1.6817795267418028,-0.0442095267418027,2,0,"Question: Statement 1| RoBERTa pretrains on a corpus that is approximate 10x larger than the corpus BERT pretrained on. Statement 2| ResNeXts in 2018 usually used tanh activation functions.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.7487,1.7333687544016538,0.015331245598346,2,1,"Question: Consider the following instance variable and methods in the same class.
+ private int[][] matrix;
+ /** Precondition: array.length > 0.
+ * @return the largest integer in array
+ */
+ private int max(int[] array)
+ { /* implementation not shown */ }
+ /** @return num1 if num1 >= num2; otherwise return num2
+ */
+ public int max(int num1, int num2)
+ { /* implementation not shown */ }
+ Suppose matrix has a current value of
+ 2 1 4 8
+ 6 0 3 9
+ 5 7 7 6
+ 1 2 3 4
+ What will be returned by the following method call in the same class?
+ max(max(matrix[2]), max(matrix[3]))
+Choices:
+0: 9
+1: 8
+2: 7
+3: 4"
+0,0.76969,0.8335583795671165,-0.0638683795671165,0,1,"Question: A large hospital maintains a list of patients’ records in no particular order. To find the record of a given patient, which represents the most efficient method that will work?
+Choices:
+0: Do a sequential search on the name field of the records.
+1: Do a binary search on the name field of the records.
+2: Use insertion sort to sort the records alphabetically by name; then do a sequential search on the name field of the records.
+3: Usemergesort to sort the records alphabetically by name; then do a sequential search on the name field of the records."
+0,1.7754,1.753762148696035,0.021637851303965,1,1,"Question: Two single-user workstations are attached to the same local area network. On one of these workstations, file pages are accessed over the network from a file server; the average access time per page is 0.1 second. On the other of these workstations, file pages are accessed from a local disk; the average access time per page is 0.05 second. A particular compilation requires 30 seconds of computation and 200 file page accesses. What is the ratio of the total time required by this compilation if run on the diskless (file server) workstation to the total time required if run on the workstation with the local disk, if it is assumed that computation is not overlapped with file access?
+Choices:
+0: 1/1
+1: 5/4
+2: 5/3
+3: 10/5"
+0,1.27275,1.2590924934922905,0.0136575065077095,3,0,"Question: Old operating systems like _______ and NT-based systems have buffer-overflow attack a common vulnerability.
+Choices:
+0: Windows 7
+1: Chrome
+2: IOS12
+3: UNIX"
+0,1.75924,1.736785450692326,0.0224545493076739,3,0,"Question: Consider the following grammar.
+S → ( S )
+S → x
+Which of the following statements is (are) true?
+I. The grammar is ambiguous.
+II. The grammar is suitable for top-down parsing.
+III. The grammar is suitable for bottom-up parsing.
+Choices:
+0: I only
+1: II only
+2: III only
+3: II and III only"
+0,1.03224,1.0054058268272876,0.0268341731727124,1,1,"Question: What is the output of the statement ""a"" + ""ab"" in Python 3?
+Choices:
+0: Error
+1: aab
+2: ab
+3: a ab"
+0,1.38193,1.4425472831474244,-0.0606172831474243,2,2,"Question: Failed sessions allow brute-force attacks on access credentials. This type of attacks are done in which layer of the OSI model?
+Choices:
+0: Physical layer
+1: Data-link Layer
+2: Session layer
+3: Presentation layer"
+0,0.93027,0.8948084196402133,0.0354615803597867,3,3,"Question: Which of the following are most vulnerable to injection attacks?
+Choices:
+0: Session IDs
+1: Registry keys
+2: Network communications
+3: SQL queries based on user input"
+0,1.82667,1.814329771515876,0.0123402284841238,0,0,"Question: Based on the paper “SoK: SSL and HTTPS: Revisiting past challenges and evaluating certificates trust model enhancements”, which of the following statements are false?
+Choices:
+0: Valid DV certificates provide more confidence to a user that she is connecting to the intended party than valid EV certificates.
+1: OCSP stapling allows a server to prove to a browser that its certificate hasn’t been revoked.
+2: DANE makes it difficult for an adversary to launch a SSL stripping attack.
+3: Server key-pinning makes it harder for an adversary to convince a CA to mint a certificate for a site and launch an MITM attack on that site."
+0,0.21087,0.2179397113451361,-0.0070697113451361,0,0,"Question: As of 2020, which architecture is best for classifying high-resolution images?
+Choices:
+0: convolutional networks
+1: graph networks
+2: fully connected networks
+3: RBF networks"
+0,0.69601,0.6719737625408172,0.0240362374591828,0,0,"Question: What is a web proxy?
+Choices:
+0: A piece of software that intercepts and possibly modifies requests (and responses) between a web browser and web server
+1: An agent that makes decisions on the client's behalf when interacting with web applications
+2: A piece of software that makes a web application look like a standalone application, making it easier to test
+3: A simulator for the web, for use when off-line"
+0,1.05617,1.0316782594625653,0.0244917405374347,2,2,"Question: Existential risks posed by AI are most commonly associated with which of the following professors?
+Choices:
+0: Nando de Frietas
+1: Yann LeCun
+2: Stuart Russell
+3: Jitendra Malik"
+0,1.91821,1.8930017504268135,0.0252082495731862,3,2,"Question: A programmer wrote the code segment below to display the average of all the elements in a list called numbers. There is always at least one number in the list.
+ Line 1: count ← 0
+ Line 2: sum ← 0
+ Line 3: FOR EACH value IN numbers
+ Line 4: {
+ Line 5: count ← count + 1
+ Line 6: sum ← sum + value
+ Line 7: average ← sum / count
+ Line 8: }
+ Line 9: DISPLAY (average)
+
+ The programmer wants to reduce the number of operations that are performed when the program is run. Which change will result in a correct program with a reduced number of operations performed?
+Choices:
+0: Interchanging line 1 and line 2
+1: Interchanging line 5 and line 6
+2: Interchanging line 6 and line 7
+3: Interchanging line 7 and line 8"
+0,1.33977,1.2834431205891073,0.0563268794108926,2,2,"Question: Suppose you want to use fuzzing on a program to try to find memory errors; which of the following statements is true?
+Choices:
+0: You should not use a grammar-based fuzzer, because its adherence to the grammar means it will not find memory errors
+1: Compiling the program with address sanitizer (ASAN) will make errors harder to reproduce
+2: Compiling the program with address sanitizer (ASAN) will make the source of a memory error easier to find
+3: Fuzzing doesn't find memory errors, it finds crashes and hangs"
+0,1.94391,1.938146969822943,0.005763030177057,0,1,"Question: Suppose we define h(H, m) = E(m, H)h(H,m)=E(m,H). Then the resulting h(\cdot,\cdot)h(⋅,⋅) is not collision resistant: to build a collision (H,m)(H,m) and (H’,m’)(H’,m’) choose random (H,m,m’)(H,m,m’) and construct H’H’ as follows:
+Choices:
+0: H’=D(m’, E(m,H))
+1: H’=E(m’,D(m,H))
+2: H’=E(m’,E(m,H))
+3: H’=D(m’,D(m,H))"
+0,1.11739,1.1495548522970829,-0.0321648522970825,1,2,"Question: Let x = 8. What is x>>1 in Python 3?
+Choices:
+0: 3
+1: 4
+2: 2
+3: 8"
+0,1.18288,1.1925177970392258,-0.0096377970392258,0,0,"Question: As the number of training examples goes to infinity, your model trained on that data will have:
+Choices:
+0: Lower variance
+1: Higher variance
+2: Same variance
+3: None of the above"
+0,1.9815,1.9683733076646923,0.0131266923353075,2,0,"Question: The openSSL implementation described in “Remote Timing Attacks are Practical” (by Brumley and Boneh) uses the following performance optimizations: Chinese Remainder (CR), Montgomery Representation (MR), Karatsuba Multiplication (KM), and Repeated squaring and Sliding windows (RS). Which of the following options would close the timing channel attack described in the paper if you turned the listed optimizations off?
+1. CR, MR, KM, and RS.
+2. RS
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.21305,1.2031670877902207,0.0098829122097792,3,3,"Question: Which of the following comes closest to being a perfectly secure encryption scheme?
+Choices:
+0: The Caesar Cipher, a substitution cipher
+1: DES (Data Encryption Standard), a symmetric-key algorithm
+2: Enigma, a transposition cipher
+3: One-time pad"
+0,1.38408,1.380277212570906,0.003802787429094,3,3,"Question: ""Magic memory""' has two operations: Read and Clear. Both are indivisible and mutually exclusive. Clear sets the magic memory to zero. Read returns a value that represents the number of Read operations since the last Clear operation. Which of the following is (are) true of ""Magic memory""?
+I. It can provide the functionality of an atomic Test-and-Set.
+II. It can be used to coordinate processes running on a shared-memory multiprocessor.
+III. It is only useful on a multiprocessor.
+Choices:
+0: I only
+1: II only
+2: III only
+3: I and II"
+0,1.90303,1.9154017047686875,-0.0123717047686873,3,2,"Question: A particular parallel program computation requires 100 seconds when executed on a single processor. If 40 percent of this computation is ""inherently sequential"" (i.e., will not benefit from additional processors), then the theoretically best possible elapsed times for this program running with 2 and 4 processors, respectively, are
+Choices:
+0: 20 and 10 seconds
+1: 30 and 15 seconds
+2: 50 and 25 seconds
+3: 70 and 55 seconds"
+0,1.90708,1.8994263389895856,0.0076536610104143,0,0,"Question: The access matrix approach to protection has the difficulty that
+Choices:
+0: the matrix, if stored directly, is large and can be clumsy to manage
+1: it is not capable of expressing complex protection requirements
+2: deciding whether a process has access to a resource is undecidable
+3: there is no way to express who has rights to change the access matrix itself"
+0,1.98577,1.9854284106002005,0.0003415893997997,3,2,"Question: The disadvantage of Grid search is
+Choices:
+0: It can not be applied to non-differentiable functions.
+1: It can not be applied to non-continuous functions.
+2: It is hard to implement.
+3: It runs reasonably slow for multiple linear regression."
+0,1.9418,1.9575229509270933,-0.0157229509270935,0,0,"Question: Which of the following statements is FALSE about memory reclamation based on reference counting?
+Choices:
+0: Reference counting is well suited for reclaiming cyclic structures.
+1: Reference counting incurs additional space overhead for each memory cell.
+2: Reference counting is an alternative to mark-and-sweep garbage collection.
+3: Reference counting need not keep track of which cells point to other cells."
+0,1.5767,1.5274797954633832,0.0492202045366167,3,3,"Question: For a connected, undirected graph G = (V, E), which of the following must be true?
+I. Σ_{v∈V} degree(v) is even.
+II. |E| ≥ |V| − 1
+III. G has at least one vertex with degree 1.
+Choices:
+0: I only
+1: II only
+2: III only
+3: I and II"
+0,0.47115,0.4192793641541898,0.0518706358458102,1,1,"Question: Which of the following best explains what happens when a new device is connected to the Internet?
+Choices:
+0: A device driver is assigned to the device.
+1: An Internet Protocol (IP) address is assigned to the device.
+2: A packet number is assigned to the device.
+3: A Web site is assigned to the device."
+0,1.91352,1.9109960659207403,0.0025239340792597,0,1,"Question: Consider an object-oriented language in which all entities are objects. Two relationships arise: (1) the instance relationship, between an object and the class of which that object is a member, and (2) the subclass relationship, between a class and the superclass from which that class inherits properties. In such a language, when a message is sent to an object requesting execution of one of its methods (procedures), the method is located by following
+Choices:
+0: one instance link and then zero or more subclass links
+1: one or more instance links and then one or more subclass links
+2: one or more instance links
+3: one subclass link and then one or more instance links"
+0,1.61664,1.6474847928002476,-0.0308447928002475,0,0,"Question: Statement 1| Besides EM, gradient descent can be used to perform inference or learning on Gaussian mixture model. Statement 2 | Assuming a fixed number of attributes, a Gaussian-based Bayes optimal classifier can be learned in time linear in the number of records in the dataset.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.83552,1.8549671273706851,-0.0194471273706853,1,0,"Question: Statement 1| The log-likelihood of the data will always increase through successive iterations of the expectation maximation algorithm. Statement 2| One disadvantage of Q-learning is that it can only be used when the learner has prior knowledge of how its actions affect its environment.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.85541,1.856512755820453,-0.001102755820453,3,3,"Question: Mergesort works by splitting a list of n numbers in half, sorting each half recursively, and merging the two halves. Which of the following data structures will allow mergesort to work in O(n log n) time?
+I. A singly linked list
+II. A doubly linked list
+III. An array
+Choices:
+0: None
+1: III only
+2: I and II only
+3: I, II, and III"
+0,1.15758,1.1052826134294271,0.0522973865705729,2,2,"Question: Buffer-overflow may remain as a bug in apps if __________ are not done fully.
+Choices:
+0: boundary hacks
+1: memory checks
+2: boundary checks
+3: buffer checks"
+0,1.9181,1.9104893886272607,0.0076106113727392,2,2,"Question: Array A contains 256 elements of 4 bytes each. Its first element is stored at physical address 4,096.
+Array B contains 512 elements of 4 bytes each. Its first element is stored at physical address 8,192.
+Assume that only arrays A and B can be cached in an initially empty, physically addressed, physically tagged, direct-mapped, 2K-byte cache with an 8-byte block size. The following loop is then executed.
+for (i = 0; i < 256; i++)
+        A[i] = A[i] + B[2*i];
+During the execution of the loop, how many bytes will be written to memory if the cache has a write-through policy?
+Choices:
+0: 0
+1: 256
+2: 1024
+3: 2048"
+0,1.6613,1.6505467436560988,0.0107532563439012,2,2,"Question: Which of the following is the joint probability of H, U, P, and W described by the given Bayesian Network H -> U <- P <- W? [note: as the product of the conditional probabilities]
+Choices:
+0: P(H, U, P, W) = P(H) * P(W) * P(P) * P(U)
+1: P(H, U, P, W) = P(H) * P(W) * P(P | W) * P(W | H, P)
+2: P(H, U, P, W) = P(H) * P(W) * P(P | W) * P(U | H, P)
+3: None of the above"
+0,1.97499,1.9771917169170083,-0.0022017169170083,3,3,"Question: Which of the following is not a transport layer vulnerability?
+Choices:
+0: Mishandling of undefined, poorly defined variables
+1: The Vulnerability that allows “fingerprinting” & other enumeration of host information
+2: Overloading of transport-layer mechanisms
+3: Unauthorized network access"
+0,0.84433,0.8163749755887686,0.0279550244112314,2,2,"Question: The numerical output of a sigmoid node in a neural network:
+Choices:
+0: Is unbounded, encompassing all real numbers.
+1: Is unbounded, encompassing all integers.
+2: Is bounded between 0 and 1.
+3: Is bounded between -1 and 1."
+0,0.44838,0.3995725592588632,0.0488074407411367,0,0,"Question: Are Python variable names case-sensitive?
+Choices:
+0: Yes
+1: No
+2: It's machine-dependent
+3: None of the above"
+0,1.14856,1.1857909905813635,-0.0372309905813634,2,2,"Question: Suppose the characters 0,1, . . . ,8,9,A,B,C,D, E,F are used to represent a hexadecimal (base-16) number. Here A = 10, B = 11, . . . ,F = 15. What is the largest base-10 integer that can be represented with a two-digit hexadecimal number, such as 14 or 3A?
+Choices:
+0: 32
+1: 225
+2: 255
+3: 256"
+0,0.76384,0.7273383769765497,0.0365016230234502,3,3,"Question: A special tool is necessary for entering the network which is _______________ that helps the anonymous internet users to access into the Tor’s network and use various Tor services.
+Choices:
+0: Opera browser
+1: Firefox
+2: Chrome
+3: Tor browser"
+0,1.95216,1.9476273733276128,0.004532626672387,0,0,"Question: The openSSL implementation described in “Remote Timing Attacks are Practical” (by Brumley and Boneh) uses the following performance optimizations: Chinese Remainder (CR), Montgomery Representation (MR), Karatsuba Multiplication (KM), and Repeated squaring and Sliding windows (RS). Which of the following options would close the timing channel attack described in the paper if you turned the listed optimizations off?
+1. CR and MR
+2. CR
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,0.47793,0.3805980675709993,0.0973319324290007,1,1,"Question: Man in the middle attack can endanger the security of Diffie Hellman method if two parties are not
+Choices:
+0: Joined
+1: Authenticated
+2: Submitted
+3: Shared"
+0,1.90659,1.923594229943305,-0.017004229943305,0,0,"Question: Statement 1| The set of all rectangles in the 2D plane (which includes non axisaligned rectangles) can shatter a set of 5 points. Statement 2| The VC-dimension of k-Nearest Neighbour classifier when k = 1 is infinite.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.71415,1.705779001480192,0.0083709985198081,1,0,"Question: The number of test examples needed to get statistically significant results should be _
+Choices:
+0: Larger if the error rate is larger.
+1: Larger if the error rate is smaller.
+2: Smaller if the error rate is smaller.
+3: It does not matter."
+0,1.63069,1.626587529120147,0.0041024708798529,2,2,"Question: Consider the following code segment, which uses the variables r, s, and t.
+  r ← 1
+   s ← 2
+   t ← 3
+   r ← s
+   s ← t
+   DISPLAY (r)
+   DISPLAY (s)
+
+ What is displayed as a result of running the code segment?
+Choices:
+0: 1 1
+1: 1 2
+2: 2 3
+3: 3 2"
+0,1.85271,1.8421388082031904,0.0105711917968096,3,0,"Question: Of the following, which gives the best upper bound for the value of f(N) where f is a solution to the recurrence f(2N + 1) = f(2N) = f(N) + log N for N >= 1, with f(1) = 0?
+Choices:
+0: O(log N)
+1: O(N log N)
+2: O(log N) + 0(1)
+3: O((log N)^2)"
+0,1.96292,1.956188465154618,0.006731534845382,0,1,"Question: In Yann LeCun's cake, the cherry on top is
+Choices:
+0: reinforcement learning
+1: self-supervised learning
+2: unsupervised learning
+3: supervised learning"
+0,1.2257,1.2528443302585184,-0.0271443302585183,1,0,"Question: A programmer is designing a program to catalog all books in a library. He plans to have a Book class that stores features of each book: author, title, isOnShelf, and so on, with operations like getAuthor, getTitle, getShelfInfo, and setShelfInfo. Another class, LibraryList, will store an array of Book objects. The LibraryList class will include operations such as listAllBooks, addBook, removeBook, and searchForBook. The programmer plans to implement and test the Book class first, before implementing the LibraryList class. The programmer’s plan to write the Book class first is an example of
+Choices:
+0: top-down development
+1: bottom-up development
+2: procedural abstraction
+3: information hiding"
+0,0.49983,0.4746201370258629,0.025209862974137,1,1,"Question: ____________________ is the anticipation of unauthorized access or break to computers or data by means of wireless networks.
+Choices:
+0: Wireless access
+1: Wireless security
+2: Wired Security
+3: Wired device apps"
+0,1.81085,1.8048592427331955,0.005990757266804536,3,0,"Question: Which of the following sets of bit strings CANNOT be described with a regular expression?
+Choices:
+0: All bit strings whose number of zeros is a multiple of five
+1: All bit strings starting with a zero and ending with a one
+2: All bit strings with an even number of zeros
+3: All bit strings with more ones than zeros"
+0,1.02427,0.9989791698522866,0.025290830147713383,2,2,"Question: ___________________ is alike as that of Access Point (AP) from 802.11, & the mobile operators uses it for offering signal coverage.
+Choices:
+0: Base Signal Station
+1: Base Transmitter Station
+2: Base Transceiver Station
+3: Transceiver Station"
+0,0.98866,1.0421002595426143,-0.05344025954261433,2,2,"Question: Suppose that Alice and Bob sent confidential text messages to one another last month through an encrypted messaging system. Alice and Bob are worried that an adversary might compromise one of their computers today, while they are taking the 6.858 final exam, and would then be able to decrypt those messages. Which of the following security properties can address Alice and Bob’s concern?
+Choices:
+0: Authentication.
+1: Deniability.
+2: Forward secrecy
+3: Backward secrecy."
+0,1.93362,1.94317685598284,-0.009556855982840062,3,0,"Question: Consider the following possible data structures for a set of n distinct integers.
+I. A min-heap
+II. An array of length n sorted in increasing order
+III. A balanced binary search tree
+For which of these data structures is the number of steps needed to find and remove the 7th largest element O(log n) in the worst case?
+Choices:
+0: I only
+1: II only
+2: I and II
+3: II and III"
+0,1.95421,1.9490131644977629,0.0051968355022371515,3,2,"Question: Consider the representation of six-bit numbers by two's complement, one's complement, or by sign and magnitude. In which representation is there overflow from the addition of the integers 011000 and 011000?
+Choices:
+0: Two's complement only
+1: Sign and magnitude and one's complement only
+2: Two's complement and one's complement only
+3: All three representations"
+0,0.47829,0.4825046928565204,-0.00421469285652043,0,0,"Question: The four Primary Security Principles related to messages are
+Choices:
+0: Confidentiality, Integrity, Non repudiation and Authentication
+1: Confidentiality, Access Control, Integrity, Non repudiation
+2: Authentication, Authorization, Availability, Integrity
+3: Availability, Authorization, Confidentiality, Integrity"
+0,1.44779,1.3828765990807115,0.06491340091928843,0,2,"Question: You've just finished training a decision tree for spam classification, and it is getting abnormally bad performance on both your training and test sets. You know that your implementation has no bugs, so what could be causing the problem?
+Choices:
+0: Your decision trees are too shallow.
+1: You need to increase the learning rate.
+2: You are overfitting.
+3: None of the above."
+0,0.72222,0.7196047890919447,0.0026152109080552766,0,0,"Question: ___________ is a process of wireless traffic analysis that may be helpful for forensic investigations or during troubleshooting any wireless issue.
+Choices:
+0: Wireless Traffic Sniffing
+1: WiFi Traffic Sniffing
+2: Wireless Traffic Checking
+3: Wireless Transmission Sniffing"
+0,1.54179,1.5163326050943138,0.025457394905686215,1,1,"Question: For a Gaussian Bayes classifier, which one of these structural assumptions is the one that most affects the trade-off between underfitting and overfitting:
+Choices:
+0: Whether we learn the class centers by Maximum Likelihood or Gradient Descent
+1: Whether we assume full class covariance matrices or diagonal class covariance matrices
+2: Whether we have equal class priors or priors estimated from the data
+3: Whether we allow classes to have different mean vectors or we force them to share the same mean vector"
+0,1.1555,1.1137339456678927,0.04176605433210723,1,0,"Question: Which among the following prevents overfitting when we perform bagging?
+Choices:
+0: The use of sampling with replacement as the sampling technique
+1: The use of weak classifiers
+2: The use of classification algorithms which are not prone to overfitting
+3: The practice of validation performed on every classifier trained"
+0,1.36104,1.321034018598795,0.04000598140120504,3,3,"Question: The algorithm below is used to simulate the results of flipping a coin 4 times. Consider the goal of determining Whether the simulation resulted in an equal number of heads and tails.
+
+   Step l : Initialize the variables heads_counter and f1ip_counter to 0.
+   Step 2 : A variable coin_f1ip is randomly assigned a value of either 0 or l.
+   If coin_f1ip has the value 0, the coin flip result is heads, so
+  heads_counter is incremented by 1.
+   Step 3 : Increment the value of f1ip_counter by l.
+   Step 4 : Repeat steps 2 and 3 until f1ip_counter equals 4.
+
+ Following execution of the algorithm, which of the following expressions indicates that the simulation resulted in an equal number of heads and tails?
+Choices:
+0: coin_f1ip = 1
+1: flip_counter = 1
+2: flip_counter = 2
+3: heads_counter = 2"
+0,1.90152,1.9079552182476966,-0.00643521824769655,0,0,"Question: Statement 1| In AdaBoost weights of the misclassified examples go up by the same multiplicative factor. Statement 2| In AdaBoost, weighted training error e_t of the tth weak classifier on training data with weights D_t tends to increase as a function of t.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.7055,1.8231236299968512,-0.11762362999685116,0,0,"Question: Statement 1| The original ResNets and Transformers are feedforward neural networks. Statement 2| The original Transformers use self-attention, but the original ResNet does not.
+Choices:
+0: True, True
+1: False, False
+2: True, False
+3: False, True"
+0,1.85173,1.8673616257824002,-0.01563162578240007,2,2,"Question: Suppose sharing of tiles in a multilevel directory structure is achieved with directory entries that are links pointing to a node containing information about a shared file. Information in this node includes (1) the owner of the file, (2) a count of the number of links to the tile, and (3) the disk block numbers of the file. What is a primary drawback to this approach to sharing?
+Choices:
+0: If the owner modifies the file, another user who does not share will see the changes.
+1: If the owner renames the file, other users will not be able to access it.
+2: If the owner is allowed to delete a file, dangling links may result.
+3: If any user who shares the file appends to it, others who share it will not be able to access the new disk blocks."
+0,0.71406,0.7894685050702841,-0.07540850507028407,2,2,"Question: The color of a pixel can be represented using the RGB (Red, Green, Blue) color model, which stores values for red, green, and blue, each ranging from 0 to 255. How many bits (binary digits) would be needed to represent a color in the RGB model?
+Choices:
+0: 8
+1: 16
+2: 24
+3: 32"
+0,1.88847,1.8875912769143284,0.0008787230856717176,0,2,"Question: When doing least-squares regression with regularisation (assuming that the optimisation can be done exactly), increasing the value of the regularisation parameter λ the testing error.
+Choices:
+0: will never decrease the training error.
+1: will never increase the training error.
+2: will never decrease the testing error.
+3: will never increase"
+0,0.3187,0.3103652920544147,0.008334707945585274,0,0,"Question: The stack is memory for storing
+Choices:
+0: Local variables
+1: Program code
+2: Dynamically linked libraries
+3: Global variables"
+0,1.53399,1.4520912365332246,0.08189876346677538,2,2,"Question: TCP protocol is responsible (among other things) for
+Choices:
+0: Routing packets through the network
+1: Reliable delivery of packets between directly connected machines
+2: Reliable delivery of large (multi-packet) messages between machines that are not necessarily directly connected
+3: Dealing with differences among operating system architectures"
+0,1.93201,1.9090819616085288,0.022928038391471173,1,0,"Question: What does EXE do when the STP solver times out on a constraint query for a particular path?
+Choices:
+0: Assume that the query is satisfiable and continue executing the path.
+1: Assume that the query is not satisfiable and stop executing the path
+2: Restart STP and retry the query, up to a limited number of retries.
+3: Remove a subset of the constraints and retry the query."
+0,0.84682,0.898608447266072,-0.05178844726607201,2,2,"Question: In Python 3, what is the output of print list[1:3] if list = [ 'abcd', 786 , 2.23, 'john', 70.2 ]?
+Choices:
+0: [ 'abcd', 786 , 2.23, 'john', 70.2 ]
+1: abcd
+2: [786, 2.23]
+3: None of the above."
+0,1.75413,1.7618969881187379,-0.007766988118737883,2,0,"Question: Consider the following three scenarios, which could be modeled using three data structures— dictionary/map, queue, and stack. Scenario 1: Cars line up in a single lane at a car wash. As each driver reaches the entrance of the car wash, the driver gets out of the car. An automatic pulley moves the car through the car wash as the driver walks to the exit of the car wash to pay and pick up the car. Scenario 2: Contestants auditioning for a reality television talent show are assigned a unique numeric ID upon completing a registration form. Scenario 3: Tennis balls are sold in a cylindrical can that can hold a maximum of 3 balls, where each ball except the bottom one rests on top of the ball below it. The 3 balls are placed in the can one at a time through one opening at the top of the can. The 3 balls are removed from the can one at a time through the same opening. Which of the following shows the data structures that best model the scenarios? Scenario 1 | Scenario 2 | Scenario 3
+Choices:
+0: Dictionary/map | Queue | Stack
+1: Dictionary/map | Stack | Queue
+2: Queue | Dictionary/map | Stack
+3: Stack | Queue | Dictionary/map"
+0,1.60349,1.5452414086075126,0.0582485913924875,1,1,"Question: What is the rank of the following matrix? A = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+Choices:
+0: 0
+1: 1
+2: 2
+3: 3"
+0,1.83302,1.8332548312558232,-0.00023483125582313136,3,3,"Question: In a height-balanced binary search tree, the heights of the left and right descendents of any node differ by at most 1. Which of the following are true of such a tree?
+I. Worst-case search time is logarithmic in the number of nodes.
+II. Average-case search time is logarithmic in the number of nodes.
+III. Best-case search time is proportional to the height of the tree.
+IV. The height of the tree is logarithmic in the number of nodes.
+Choices:
+0: I and III only
+1: II and III only
+2: II and IV only
+3: I, II, and IV"
+0,0.54346,0.5175476155530662,0.02591238444693389,2,2,"Question: In a _____________ attack, the extra data that holds some specific instructions in the memory for actions is projected by a cyber-criminal or penetration tester to crack the system.
+Choices:
+0: Phishing
+1: MiTM
+2: Buffer-overflow
+3: Clickjacking"
+0,1.04039,0.9993473312904686,0.04104266870953133,3,3,"Question: Which of the following is a true statement about program documentation?
+Choices:
+0: Program documentation should not be changed after it is first written.
+1: Program documentation is only needed for programs in development; it is not needed after a program is completed.
+2: Program documentation is useful when programmers collaborate but not when a programmer works individually on a project.
+3: Program documentation is useful during initial program development and also when modifications are made to existing programs."
+0,1.89337,1.863082193455547,0.030287806544452955,0,0,"Question: Two processors, M-5 and M-7, implement the same instruction set. Processor M-5 uses a 5-stage pipeline and a clock cycle of 10 nanoseconds. Processor M-7 uses a 7-stage pipeline and a clock cycle of 7.5 nanoseconds. Which of the following is (are) true?
+I. M-7’s pipeline has better maximum throughput than M-5’s pipeline.
+II. The latency of a single instruction is shorter on M-7’s pipeline than on M-5’s pipeline.
+III. Programs executing on M-7 will always run faster than programs executing on M-5.
+Choices:
+0: I only
+1: II only
+2: I and III
+3: II and III"
+0,0.53316,0.506431770028174,0.026728229971826,1,1,"Question: Suppose we would like to perform clustering on spatial data such as the geometrical locations of houses. We wish to produce clusters of many different sizes and shapes. Which of the following methods is the most appropriate?
+Choices:
+0: Decision Trees
+1: Density-based clustering
+2: Model-based clustering
+3: K-means clustering"
+0,0.82518,0.7958099893841147,0.02937001061588529,1,1,"Question: An Insect class is to be written, containing the following data fields: age, which will be initialized to 0 when an Insect is constructed. nextAvailableID, which will be initialized to 0 outside the constructor and incremented each time an Insect is constructed. idNum, which will be initialized to the current value of nextAvailableID when an Insect is constructed. position, which will be initialized to the location in a garden where the Insect is placed when it is constructed. direction, which will be initialized to the direction the Insect is facing when placed in the garden. Which variable in the Insect class should be static?
+Choices:
+0: age
+1: nextAvailableID
+2: idNum
+3: position"
+0,1.1832,1.063869154309258,0.11933084569074204,1,1,"Question: The Message condentiality or privacy means that the sender and the receiver expect
+Choices:
+0: Integrity
+1: Condentiality
+2: Authentication
+3: Nonrepudiation"
+0,1.94786,1.9355446305891872,0.012315369410812682,0,0,"Question: We are training fully connected network with two hidden layers to predict housing prices. Inputs are $100$-dimensional, and have several features such as the number of square feet, the median family income, etc. The first hidden layer has $1000$ activations. The second hidden layer has $10$ activations. The output is a scalar representing the house price. Assuming a vanilla network with affine transformations and with no batch normalization and no learnable parameters in the activation function, how many parameters does this network have?
+Choices:
+0: 111021
+1: 110010
+2: 111110
+3: 110011"
+0,1.23735,1.2763941319790484,-0.039044131979048435,0,0,"Question: Which pillar of cybersecurity is compromised when someone logs into a system using a stolen login and password?
+Choices:
+0: Authentication
+1: Confidentiality
+2: Integrity
+3: Nonrepudiation"
+0,1.97245,1.9647459741449358,0.007704025855064245,3,1,"Question: Two alternatives for interconnecting a set of processors with bidirectional links are (1) the fully interconnected network, in which each processor is directly connected to every other processor, and (2) the ring network, in which each processor is connected to two other processors. The worst-case path length for a network is the maximum, over all pairs of nodes in the network, of the minimum length paths (measured in number of links) between the nodes. For each type of interconnection of n processors, a figure of merit can be formed as the product of the number of links required for the network times the worst-case path length connecting any two processors. The ratio of this figure of merit for the fully interconnected network compared to that of the ring network, for even n > 2, is
+Choices:
+0: 1/(n^2)
+1: 1/(n(n-1))
+2: 1/n
+3: (n-1)/n"
+0,0.68887,0.6442534174080193,0.04461658259198065,1,1,"Question: In Python 3, what is the output of print tuple[0] if tuple = ( 'abcd', 786 , 2.23, 'john', 70.2 )?
+Choices:
+0: ( 'abcd', 786 , 2.23, 'john', 70.2 )
+1: abcd
+2: Error
+3: None of the above."
+0,1.81204,1.8143282514243575,-0.0022882514243574015,3,2,"Question: Suppose it takes 1 second to factor a general 100 x 100 matrix using Gaussian elimination. Of the following, which is the best estimate of the number of seconds it will take to factor a 500 x 500 matrix based on the relative dimensions?
+Choices:
+0: 5
+1: 10
+2: 25
+3: 125"
+0,1.8559,1.8749681150962414,-0.01906811509624129,2,0,"Question: Which form of encryption does WPA use?
+Choices:
+0: Shared key
+1: LEAP
+2: TKIP
+3: AES"
