@@ -1,0 +1,6 @@
+{
+  "model": {"hidden_size": 128, "cond_dim": 128, "n_blocks": 2, "n_heads": 4, "dropout": 0.0, "value_embedding": "row", "value_scale": 10.0},
+  "tokenizer": {"integer_digits": 3, "decimals": 2},
+  "data": {"input_size": 1, "context_min": 3, "context_max": 30, "max_queries": 2, "input_range": 30.0, "weight_scale": 2.0, "bias_scale": 3.0, "noise_std": 0.1, "noise_std_max": 3.0, "cluster_prob": 0.5, "cluster_std_min": 0.5, "cluster_std_max": 5.0, "near_query_prob": 0.7, "near_query_std_min": 0.05, "near_query_std_max": 2.0},
+  "training": {"steps": 20000, "batch_size": 256, "lr": 0.0003, "seed": 0, "eval_every": 2000, "eval_tasks": 256, "sample_steps": 32, "precision": "fp32"}
+}

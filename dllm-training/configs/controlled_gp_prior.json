@@ -1,0 +1,11 @@
+{
+  "lengthscale_min": 0.5,
+  "lengthscale_max": 3.0,
+  "clean_probability": 0.5,
+  "clean_variance_ratio_min": 0.000001,
+  "clean_variance_ratio_max": 0.001,
+  "noisy_variance_ratio_min": 0.03,
+  "noisy_variance_ratio_max": 1.0,
+  "threshold_std": 0.5,
+  "jitter": 0.00000001
+}

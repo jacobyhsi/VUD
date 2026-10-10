@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from src.dataset import load_dataset
 from src.bayesian_optimisation import new_candidate
-from src.utils import ToyRegressionUtils, GaussianDistribution, extract, calculate_min_Va_by_KL_rank
+from src.utils import ToyRegressionUtils, GaussianDistribution, extract, calculate_min_Va_by_KL_rank, append_x_results, combined_results_path, load_result_x_frames, read_results_csv, resume_completed_x
 from src.prompt import ToyRegressionPrompt
 from src.chat import chat_response_only
 from src.parallel.va_estimators import get_regression_va_estimator
@@ -34,7 +34,7 @@ parser.add_argument("--is_local_client", default=1, type=int)
 
 """Dataset Configuration"""
 parser.add_argument("--dataset_name", default="linear_regression", type=str)
-parser.add_argument("--D_size", default=15, type=int)
+parser.add_argument("--D_size", default=None, type=int, help="ICL context size. Default 15; gaps uses 30.")
 
 """X Configuration"""
 parser.add_argument("--x_row_method", type=str, default="x_range")
@@ -73,12 +73,7 @@ parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
 parser.add_argument("--plot", default=1, type=int, help="Save the 1D total-uncertainty decomposition plot during the run. Default 1.")
-parser.add_argument(
-    "--resume",
-    default=0,
-    type=int,
-    help="Skip x-slices whose result CSV already exists and continue from the first missing slice.",
-)
+parser.add_argument("--resume", default=0, type=int, help="Append each x to one results_{run_name}.csv. With resume 1, skip x values already in that file or in older per-x CSVs.")
 parser.add_argument(
     "--va_method",
     default="vanilla",
@@ -93,9 +88,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "--num_joint_samples",
-    default=10,
+    default=None,
     type=int,
-    help="Number of paired (u, y) denoising samples used by parallel regression.",
+    help="Paired (u, y) denoising samples for parallel regression. Default 100 for parallel_pp, otherwise 10.",
 )
 parser.add_argument(
     "--num_masks_per_slot",
@@ -111,13 +106,27 @@ parser.add_argument(
 args = None
 
 
+DEFAULT_NUM_JOINT_SAMPLES = 10
+PP_NUM_JOINT_SAMPLES = 100
+DEFAULT_D_SIZE = 15
+DATASET_D_SIZES = {"gaps": 30}
+
+
 def parse_args(argv=None):
     global args
     args = parser.parse_args(argv)
+    if args.D_size is None:
+        args.D_size = DATASET_D_SIZES.get(args.dataset_name, DEFAULT_D_SIZE)
+    if args.num_joint_samples is None:
+        args.num_joint_samples = (
+            PP_NUM_JOINT_SAMPLES if args.va_method == "parallel_pp" else DEFAULT_NUM_JOINT_SAMPLES
+        )
     save_directory_was_default = args.save_directory is None
     if args.save_directory is None:
         args.save_directory = args.model_name.rsplit("/", 1)[-1]
-    if args.va_method != "vanilla" and save_directory_was_default:
+    if save_directory_was_default:
+        # Default settings get the plain name, e.g. <model>/va_vanilla/seed_0 or
+        # <model>/va_parallel_pp/seed_0; pass --save_directory for non-default D or N.
         args.save_directory = f"{str(args.save_directory).rstrip('/')}/va_{args.va_method}"
     save_dir = str(args.save_directory).rstrip("/")
     seed_dir = f"seed_{args.icl_sample_seed}"
@@ -186,7 +195,7 @@ def validate_pp_result_directory(output_dir, config):
     for path in sorted(Path(output_dir).glob("results_*.csv")):
         if path.stat().st_size == 0:
             continue
-        rows = pd.read_csv(path)
+        rows = read_results_csv(path)
         saved_pp = "va_method" in rows and rows["va_method"].eq("parallel_pp").any()
         if not current_pp and not saved_pp:
             continue
@@ -231,10 +240,7 @@ def save_toy_regression_plots(output_dir: str, run_name: str) -> list[str]:
     feature_column = ToyRegressionUtils.get_feature_columns(D_data)[0]
     x_col = f"x_{feature_column}"
 
-    df_list = []
-    for filename in os.listdir(results_directory):
-        if filename.startswith("results_") and filename.endswith(".csv"):
-            df_list.append(pd.read_csv(results_directory + filename))
+    df_list = load_result_x_frames(output_dir)
 
     if not df_list:
         print(f"Skipping plot: no results_*.csv files in {output_dir}")
@@ -568,30 +574,33 @@ class ToyRegressionExperiment:
         
         return save_df
             
-    def _x_csv_path(self, output_dir: str, x_idx: int) -> str:
-        return f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv"
-
     def _resume_from_existing(self, output_dir: str) -> None:
+        results_path = combined_results_path(output_dir, self.config.run_name)
         if not self.config.resume:
+            if results_path.is_file():
+                results_path.unlink()
+            self._completed_x = set()
+            print(f"Writing results to {results_path}")
             return
-        last_idx = None
-        n_skip = 0
-        for x_idx in range(self.num_x_values):
-            path = self._x_csv_path(output_dir, x_idx)
-            if os.path.isfile(path) and os.path.getsize(path) > 0:
-                last_idx = x_idx
-                n_skip += 1
-        if last_idx is None:
-            print("Resume: no existing x-slices found, starting from the beginning.")
-            return
-        last_path = self._x_csv_path(output_dir, last_idx)
-        last_df = pd.read_csv(last_path)
-        if "api_calls" in last_df.columns and len(last_df):
-            self.num_api_calls = int(last_df["api_calls"].iloc[-1])
-        print(
-            f"Resume: skipping {n_skip}/{self.num_x_values} existing x-slices "
-            f"(last kept x{last_idx + self.config.x_save_value}, api_calls={self.num_api_calls})."
+        self._completed_x, api_calls, dropped = resume_completed_x(
+            output_dir,
+            self.config.run_name,
+            self.x_row["note"].tolist(),
+            self.config.num_z,
+            self.config.x_save_value,
         )
+        if api_calls is not None:
+            self.num_api_calls = api_calls
+        if not self._completed_x:
+            print("Resume: no existing x-slices found, starting from the beginning.")
+        else:
+            print(
+                f"Resume: skipping {len(self._completed_x)}/{self.num_x_values} existing x-slices "
+                f"(api_calls={self.num_api_calls})."
+            )
+        if dropped:
+            print(f"Resume: dropped {dropped} rows from a partial trailing x in {results_path.name}.")
+        print(f"Writing results to {results_path}")
 
     def run_experiment(self):
         output_dir = f"results/toy_regression/{self.config.dataset_name}/{self.config.save_directory}"
@@ -599,11 +608,10 @@ class ToyRegressionExperiment:
         self._resume_from_existing(output_dir)
         feature_column = self.feature_columns[0]
         for x_idx in range(self.num_x_values):
-            csv_path = self._x_csv_path(output_dir, x_idx)
-            if self.config.resume and os.path.isfile(csv_path) and os.path.getsize(csv_path) > 0:
+            if x_idx in self._completed_x:
                 continue
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(csv_path, index=False)
+            append_x_results(output_dir, self.config.run_name, save_df)
             if self.config.plot:
                 x_val = float(self.x_row.iloc[x_idx][feature_column])
                 at_checkpoint = abs(x_val / 5.0 - round(x_val / 5.0)) < 1e-6

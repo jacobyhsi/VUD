@@ -1,0 +1,6 @@
+{
+  "model": {"hidden_size": 128, "cond_dim": 128, "n_blocks": 4, "n_heads": 4, "dropout": 0.0},
+  "tokenizer": {"integer_digits": 3, "decimals": 2},
+  "data": {"input_size": 1, "context_min": 3, "context_max": 30, "max_queries": 2, "input_range": 30.0, "weight_scale": 2.0, "bias_scale": 3.0, "noise_std": 2.0},
+  "training": {"steps": 10000, "batch_size": 32, "lr": 0.0003, "seed": 0, "eval_every": 250, "eval_tasks": 32, "sample_steps": 32}
+}

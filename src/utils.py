@@ -1,6 +1,9 @@
 import math
+import os
 import re
 import ast
+from io import StringIO
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
@@ -129,6 +132,157 @@ def calculate_min_Va_by_KL_rank(save_data: pd.DataFrame, num_valid_Va: int = 5, 
     save_data[f"max_{epistemic_key}"] = max_Ve
     
     return save_data
+
+
+_LEGACY_X_CSV = re.compile(r"_x(\d+)\.csv$")
+
+
+def split_result_x_frames(save_data: pd.DataFrame) -> list[pd.DataFrame]:
+    """One frame per query x. A combined results CSV holds many x values; a legacy file holds one."""
+    if save_data.empty:
+        return []
+    if "x_note" not in save_data.columns or save_data["x_note"].nunique(dropna=False) <= 1:
+        return [save_data.reset_index(drop=True)]
+    return [group.reset_index(drop=True) for _, group in save_data.groupby("x_note", sort=False)]
+
+
+def read_results_csv(path: str | Path) -> pd.DataFrame:
+    path = Path(path)
+    try:
+        return pd.read_csv(path)
+    except pd.errors.ParserError:
+        text = path.read_text()
+        newline = text.rfind("\n")
+        if newline <= 0:
+            raise
+        return pd.read_csv(StringIO(text[: newline + 1]))
+
+
+def load_result_x_frames(output_dir: str) -> list[pd.DataFrame]:
+    """Load every results CSV in a directory as one frame per x. Combined rows win over a legacy per-x file."""
+    directory = Path(output_dir)
+    if not directory.is_dir():
+        return []
+    paths = [
+        path for path in directory.iterdir()
+        if path.is_file() and path.suffix == ".csv" and path.name.startswith("results_") and path.stat().st_size > 0
+    ]
+    paths.sort(key=lambda path: (_LEGACY_X_CSV.search(path.name) is not None, path.name))
+    frames = []
+    seen = set()
+    for path in paths:
+        for frame in split_result_x_frames(read_results_csv(path)):
+            if "x_note" not in frame.columns or frame.empty:
+                frames.append(frame)
+                continue
+            note = frame["x_note"].iloc[0]
+            if note in seen:
+                continue
+            seen.add(note)
+            frames.append(frame)
+    return frames
+
+
+def combined_results_path(output_dir: str, run_name: str) -> Path:
+    return Path(output_dir) / f"results_{run_name}.csv"
+
+
+def append_x_results(output_dir: str, run_name: str, save_df: pd.DataFrame) -> Path:
+    path = combined_results_path(output_dir, run_name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_header = not path.is_file() or path.stat().st_size == 0
+    if not write_header:
+        existing = pd.read_csv(path, nrows=0).columns.tolist()
+        if existing != list(save_df.columns):
+            raise ValueError(
+                f"Column mismatch appending to {path}. Start a new --save_directory instead of mixing schemas."
+            )
+    with path.open("a", newline="") as handle:
+        save_df.to_csv(handle, header=write_header, index=False)
+        handle.flush()
+        os.fsync(handle.fileno())
+    return path
+
+
+def _drop_incomplete_x_tail(save_data: pd.DataFrame, num_z: int) -> tuple[pd.DataFrame, int]:
+    if save_data.empty or "x_note" not in save_data.columns or num_z <= 0:
+        return save_data, 0
+    last_note = save_data["x_note"].iloc[-1]
+    is_last = save_data["x_note"] == last_note
+    last_count = int(is_last.sum())
+    if last_count == num_z or last_count > num_z:
+        return save_data, 0
+    if not bool(is_last.iloc[-last_count:].all()):
+        return save_data, 0
+    return save_data.iloc[:-last_count].copy(), last_count
+
+
+def resume_completed_x(
+    output_dir: str,
+    run_name: str,
+    x_notes: list,
+    num_z: int,
+    x_save_value: int,
+) -> tuple[set[int], Optional[int], int]:
+    """x indices already on disk, api_calls from the latest complete slice, and rows dropped from a partial tail."""
+    directory = Path(output_dir)
+    done: set[int] = set()
+    api_calls = None
+    best_idx = -1
+    dropped = 0
+    note_to_idx = {}
+    for idx, note in enumerate(x_notes):
+        note_to_idx.setdefault(str(note), idx)
+
+    def consider(idx: int, frame: pd.DataFrame) -> None:
+        nonlocal api_calls, best_idx
+        if idx > best_idx and "api_calls" in frame.columns and len(frame):
+            best_idx = idx
+            api_calls = int(frame["api_calls"].iloc[-1])
+
+    combined = combined_results_path(output_dir, run_name)
+    if combined.is_file() and combined.stat().st_size > 0:
+        try:
+            saved = pd.read_csv(combined)
+            torn = False
+        except pd.errors.ParserError:
+            saved = read_results_csv(combined)
+            torn = True
+        trimmed, dropped = _drop_incomplete_x_tail(saved, num_z)
+        if torn or dropped:
+            if trimmed.empty:
+                combined.unlink()
+            else:
+                temporary = combined.with_name(combined.name + ".tmp")
+                trimmed.to_csv(temporary, index=False)
+                os.replace(temporary, combined)
+            saved = trimmed
+        if not saved.empty and "x_note" in saved.columns:
+            for note, group in saved.groupby("x_note", sort=False):
+                idx = note_to_idx.get(str(note))
+                if idx is None:
+                    continue
+                done.add(idx)
+                consider(idx, group)
+
+    legacy_pattern = re.compile(rf"^results_{re.escape(str(run_name))}_x(\d+)\.csv$")
+    legacy = []
+    if directory.is_dir():
+        for path in directory.iterdir():
+            match = legacy_pattern.fullmatch(path.name)
+            if match is None or not path.is_file() or path.stat().st_size == 0:
+                continue
+            idx = int(match.group(1)) - x_save_value
+            if idx < 0 or idx >= len(x_notes) or idx in done:
+                continue
+            legacy.append((idx, path))
+    for idx, _path in legacy:
+        done.add(idx)
+    if legacy:
+        idx, path = max(legacy)
+        if idx > best_idx:
+            consider(idx, read_results_csv(path))
+    return done, api_calls, dropped
 
 def extract(text, tag_text: str = "output"):
     match = re.search(fr'(.*?)</{tag_text}>', text, re.DOTALL | re.IGNORECASE)

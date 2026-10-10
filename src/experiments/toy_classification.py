@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from src.dataset import load_dataset
 from src.bayesian_optimisation import new_candidate
-from src.utils import ToyClassificationUtils, calculate_entropy, calculate_kl_divergence, calculate_discrete_variance, calculate_min_Va_by_KL_rank
+from src.utils import ToyClassificationUtils, calculate_entropy, calculate_kl_divergence, calculate_discrete_variance, calculate_min_Va_by_KL_rank, append_x_results, combined_results_path, load_result_x_frames, resume_completed_x
 from src.prompt import ToyClassificationPrompt
 from src.chat import chat
 from src.parallel.va_estimators import get_va_estimator
@@ -28,25 +28,13 @@ parser.add_argument("--is_local_client", default=1, type=int)
 
 """Dataset Configuration"""
 parser.add_argument("--dataset_name", default="logistic_regression")
-parser.add_argument(
-    "--D_size",
-    default=None,
-    type=int,
-    help="ICL context size. Default 15, or 200 when --dataset_name is spirals.",
-)
+parser.add_argument("--D_size", default=None, type=int, help="ICL context size. Default 15; moons_1/moons_2 use 30 and spirals uses 200.")
 
 """X Configuration"""
 parser.add_argument("--x_row_method",type=str, default="x_range")
 parser.add_argument("--num_x_samples", default=1, type=int)
 parser.add_argument("--x_features", default=None)
-parser.add_argument(
-    "--x_range",
-    default=None,
-    help=(
-        "Evaluation grid as a dict string of [start, end, step] per feature. "
-        "Default {'x1': [-12, 12, 0.2]}. Spirals defaults to x1 and x2 on [-4, 4) with step 0.1."
-    ),
-)
+parser.add_argument("--x_range", default=None, help="Evaluation grid as a dict string of [start, end, step] per feature. Default {'x1': [-12, 12, 0.2]}. Spirals: both features [-4, 4), step 0.1. Moons_1: both features [-1.5, 2.5), step 0.2. Moons_2: x1 [-3, 3.5), x2 [-2.5, 3), step 0.2.")
 parser.add_argument("--x_sample_seed", default=0, type=int)
 parser.add_argument("--decimal_places", default=1, type=int)
 
@@ -74,38 +62,25 @@ parser.add_argument("--x_save_value", default=0, type=int)
 parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 
 parser.add_argument("--verbose_output", default=0, type=int)
-parser.add_argument("--plot", default=1, type=int, help="Save the 1D total-uncertainty decomposition plot after the run. Default 1.")
-parser.add_argument(
-    "--resume",
-    default=0,
-    type=int,
-    help="Skip x-slices whose result CSV already exists and continue from the first missing slice.",
-)
-parser.add_argument(
-    "--va_method",
-    default="vanilla",
-    type=str,
-    choices=("vanilla", "parallel_pf", "parallel_pp", "parallel", "parallel_hybrid"),
-    help=(
-        "Va estimator: vanilla (forward factorization), parallel_pf (joint-canvas "
-        "samples scored by the forward conditional), parallel_pp (joint-count entropy), "
-        "parallel (legacy PF alias), or "
-        "parallel_hybrid (parallel u with conditional entropy of sequential y|u)."
-    ),
-)
-parser.add_argument(
-    "--num_joint_samples",
-    default=10,
-    type=int,
-    help="Number of joint (u, y) Monte Carlo samples for parallel Va.",
-)
+parser.add_argument("--plot", default=1, type=int, help="Save decomposition plots as results are written, and again at the end. Logistic regression writes the 1D curve. moons_1, moons_2, and spirals write the 2D heatmaps. Default 1.")
+parser.add_argument("--resume", default=0, type=int, help="Append each x to one results_{run_name}.csv. With resume 1, skip x values already in that file or in older per-x CSVs.")
+parser.add_argument("--va_method", default="vanilla", type=str, choices=("vanilla", "parallel_pf", "parallel_pp", "parallel", "parallel_hybrid"), help="Va estimator: vanilla (forward factorization), parallel_pf (joint-canvas samples scored by the forward conditional), parallel_pp (joint-count entropy), parallel (legacy PF alias), or parallel_hybrid (parallel u with conditional entropy of sequential y|u).")
+parser.add_argument("--num_joint_samples", default=None, type=int, help="Joint (u, y) samples for parallel Va. Default 100 for parallel_pp, otherwise 10.")
 args = None
 
 
 DEFAULT_D_SIZE = 15
 DEFAULT_X_RANGE = "{'x1': [-12, 12, 0.2]}"
+DEFAULT_NUM_JOINT_SAMPLES = 10
+PP_NUM_JOINT_SAMPLES = 100
 SPIRALS_D_SIZE = 200
 SPIRALS_X_RANGE = "{'x1': [-4, 4, 0.1], 'x2': [-4, 4, 0.1]}"
+MOONS_D_SIZE = 30
+MOONS_X_RANGES = {
+    "moons_1": "{'x1': [-1.5, 2.5, 0.2], 'x2': [-1.5, 2.5, 0.2]}",
+    "moons_2": "{'x1': [-3.0, 3.5, 0.2], 'x2': [-2.5, 3.0, 0.2]}",
+}
+TWO_D_PLOT_DATASETS = {"moons_1", "moons_2", "spirals"}
 
 
 def parse_args(argv=None):
@@ -116,11 +91,20 @@ def parse_args(argv=None):
             args.D_size = SPIRALS_D_SIZE
         if args.x_range is None:
             args.x_range = SPIRALS_X_RANGE
+    elif args.dataset_name in MOONS_X_RANGES:
+        if args.D_size is None:
+            args.D_size = MOONS_D_SIZE
+        if args.x_range is None:
+            args.x_range = MOONS_X_RANGES[args.dataset_name]
     else:
         if args.D_size is None:
             args.D_size = DEFAULT_D_SIZE
         if args.x_range is None:
             args.x_range = DEFAULT_X_RANGE
+    if args.num_joint_samples is None:
+        args.num_joint_samples = (
+            PP_NUM_JOINT_SAMPLES if args.va_method == "parallel_pp" else DEFAULT_NUM_JOINT_SAMPLES
+        )
     save_directory_was_default = args.save_directory is None
     if args.save_directory is None:
         args.save_directory = args.model_name.rsplit("/", 1)[-1]
@@ -198,11 +182,7 @@ def save_toy_classification_plots(output_dir: str, run_name: str) -> list[str]:
 
     feature_column = [col for col in D_data.columns if col != "label" and col != "note"][0]
 
-    df_list = []
-    for filename in os.listdir(results_directory):
-        if f"results_" in filename:
-            save_data = pd.read_csv(results_directory + filename)
-            df_list.append(save_data)
+    df_list = load_result_x_frames(output_dir)
 
     if not df_list:
         print(f"Skipping plot: no results_*.csv files in {output_dir}")
@@ -321,7 +301,159 @@ def save_toy_classification_plots(output_dir: str, run_name: str) -> list[str]:
     fig.savefig(plot_path, dpi=160, bbox_inches="tight")
     plt.close(fig)
     return [plot_path]
-    
+
+
+def save_2d_classification_plots(output_dir: str, run_name: str) -> list[str]:
+    """Save 2D classification heatmaps from the results CSV, including a partial grid."""
+    import colorsys
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    from scipy.ndimage import zoom
+
+    eval_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "eval"))
+    if eval_dir not in sys.path:
+        sys.path.insert(0, eval_dir)
+    from notebook_utils import set_plot_style
+
+    set_plot_style()
+
+    results_directory = output_dir if output_dir.endswith(os.sep) else output_dir + os.sep
+    d_data = None
+    for filename in os.listdir(results_directory):
+        if filename.startswith("D_") and filename.endswith(".csv"):
+            d_data = pd.read_csv(results_directory + filename)
+    frames = load_result_x_frames(output_dir)
+    if d_data is None:
+        print(f"Skipping plot: missing ICL file in {output_dir}")
+        return []
+    if not frames:
+        print(f"Skipping plot: no results_*.csv files in {output_dir}")
+        return []
+
+    for frame in frames:
+        calculate_min_Va_by_KL_rank(frame, num_valid_Va=5, forward_kl=True)
+
+    feature_columns = [col for col in d_data.columns if col not in ("label", "note")]
+    if len(feature_columns) != 2:
+        print(f"Skipping 2D plot: expected 2 features, found {feature_columns}")
+        return []
+
+    prob_labels = [
+        column[len("p(y="):-len("|x,D)")]
+        for column in frames[0].columns
+        if column.startswith("p(y=") and column.endswith("|x,D)")
+    ]
+    rows = []
+    skipped = 0
+    for z_df in frames:
+        try:
+            min_va_index = z_df[z_df["z_value_for_min_Va"]].index[0]
+            row = {
+                "x1": z_df[f"x_{feature_columns[0]}"].values[0],
+                "x2": z_df[f"x_{feature_columns[1]}"].values[0],
+                "total_uncertainty": z_df["H[p(y|x,D)]"].values[0],
+                "min_Va": z_df["min_Va"].values[0],
+                "max_Ve": z_df["max_Ve"].values[0],
+            }
+            for label in prob_labels:
+                row[f"p_y{label}"] = z_df[f"p(y={label}|x,D)"].values[min_va_index]
+            rows.append(row)
+        except Exception:
+            skipped += 1
+    if not rows:
+        print(f"Skipping plot: no usable 2D results in {output_dir}")
+        return []
+
+    points = pd.DataFrame(rows)
+    counts = points.groupby("x1").size()
+    complete_x1 = counts[counts == counts.max()].index
+    points = points[points["x1"].isin(complete_x1)]
+    x1_values = np.sort(points["x1"].unique())
+    x2_values = np.sort(points["x2"].unique())
+    grid = points.pivot(index="x2", columns="x1", values="total_uncertainty")
+    if grid.shape != (len(x2_values), len(x1_values)) or grid.isna().any().any():
+        print(f"Skipping plot: 2D results are not a complete grid ({len(points)} points).")
+        return []
+
+    def panel_values(column):
+        return points.pivot(index="x2", columns="x1", values=column).to_numpy()
+
+    step = np.round(np.array([
+        x1_values[1] - x1_values[0] if len(x1_values) > 1 else 0.2,
+        x2_values[1] - x2_values[0] if len(x2_values) > 1 else 0.2,
+    ]), 2)
+    extents = np.round([
+        x1_values[0] - step[0], x1_values[-1] + step[0],
+        x2_values[0] - step[1], x2_values[-1] + step[1],
+    ], 3).tolist()
+
+    def brighter_colour(colour, amount):
+        hue, light, sat = colorsys.rgb_to_hls(*mpl.colors.to_rgb(colour))
+        return mpl.colors.to_hex(colorsys.hls_to_rgb(hue, light, min(1, sat + amount)))
+
+    def scatter_context(ax):
+        seen = set()
+        colours = {0: "C2", 1: "C3", 2: "C4"}
+        for _, row in d_data.iterrows():
+            label = int(row["label"])
+            legend = None if label in seen else rf"$y={label}$"
+            seen.add(label)
+            ax.scatter(
+                row[feature_columns[0]], row[feature_columns[1]],
+                c=colours[label], edgecolor="black", s=100, alpha=1, label=legend,
+            )
+        ax.legend(framealpha=0.75)
+
+    panels = [
+        (
+            f"plot_total_uncertainty_{run_name}.png",
+            panel_values("total_uncertainty"),
+            mpl.colors.LinearSegmentedColormap.from_list(
+                "white_to_C0", ["white", brighter_colour("C0", 0.3)]
+            ),
+            (12, 6),
+        ),
+        (
+            f"plot_aleatoric_uncertainty_{run_name}.png",
+            panel_values("min_Va"),
+            mpl.colors.LinearSegmentedColormap.from_list(
+                "white_to_C1", ["white", brighter_colour("C1", 0.3)]
+            ),
+            (10, 6),
+        ),
+        (
+            f"plot_epistemic_uncertainty_{run_name}.png",
+            panel_values("max_Ve"),
+            mpl.colors.LinearSegmentedColormap.from_list(
+                "white_to_C5", ["white", brighter_colour("C5", 0.5)]
+            ),
+            (10, 6),
+        ),
+    ]
+    written = []
+    for name, values, cmap, figsize in panels:
+        fig, ax = plt.subplots(figsize=figsize)
+        image = ax.matshow(zoom(values, 4), origin="lower", extent=extents, cmap=cmap, vmin=0)
+        fig.colorbar(image)
+        ax.xaxis.set_ticks_position("top")
+        ax.xaxis.set_label_position("bottom")
+        ax.tick_params(axis="x", top=True, labeltop=True, bottom=False, labelbottom=False)
+        ax.set_xlabel(r"$x_1$")
+        ax.set_ylabel(r"$x_2$", rotation=0)
+        scatter_context(ax)
+        ax.set_xlim(extents[0], extents[1])
+        ax.set_ylim(extents[2], extents[3])
+        path = os.path.join(output_dir, name)
+        fig.savefig(path, dpi=160, bbox_inches="tight")
+        plt.close(fig)
+        written.append(path)
+    if skipped:
+        print(f"2D plot skipped {skipped} result files in {output_dir}")
+    return written
+
+
 class ToyClassificationExperiment:
     def __init__(self, config: ToyClassificationExperimentConfig):
         self.config = config
@@ -585,30 +717,33 @@ class ToyClassificationExperiment:
         
         return save_df
             
-    def _x_csv_path(self, output_dir: str, x_idx: int) -> str:
-        return f"{output_dir}/results_{self.config.run_name}_x{x_idx + self.config.x_save_value}.csv"
-
     def _resume_from_existing(self, output_dir: str) -> None:
+        results_path = combined_results_path(output_dir, self.config.run_name)
         if not self.config.resume:
+            if results_path.is_file():
+                results_path.unlink()
+            self._completed_x = set()
+            print(f"Writing results to {results_path}")
             return
-        last_idx = None
-        n_skip = 0
-        for x_idx in range(self.num_x_values):
-            path = self._x_csv_path(output_dir, x_idx)
-            if os.path.isfile(path) and os.path.getsize(path) > 0:
-                last_idx = x_idx
-                n_skip += 1
-        if last_idx is None:
-            print("Resume: no existing x-slices found, starting from the beginning.")
-            return
-        last_path = self._x_csv_path(output_dir, last_idx)
-        last_df = pd.read_csv(last_path)
-        if "api_calls" in last_df.columns and len(last_df):
-            self.num_api_calls = int(last_df["api_calls"].iloc[-1])
-        print(
-            f"Resume: skipping {n_skip}/{self.num_x_values} existing x-slices "
-            f"(last kept x{last_idx + self.config.x_save_value}, api_calls={self.num_api_calls})."
+        self._completed_x, api_calls, dropped = resume_completed_x(
+            output_dir,
+            self.config.run_name,
+            self.x_row["note"].tolist(),
+            self.config.num_z,
+            self.config.x_save_value,
         )
+        if api_calls is not None:
+            self.num_api_calls = api_calls
+        if not self._completed_x:
+            print("Resume: no existing x-slices found, starting from the beginning.")
+        else:
+            print(
+                f"Resume: skipping {len(self._completed_x)}/{self.num_x_values} existing x-slices "
+                f"(api_calls={self.num_api_calls})."
+            )
+        if dropped:
+            print(f"Resume: dropped {dropped} rows from a partial trailing x in {results_path.name}.")
+        print(f"Writing results to {results_path}")
 
     def run_experiment_default(self):
         output_dir = f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}"
@@ -616,18 +751,20 @@ class ToyClassificationExperiment:
         self._resume_from_existing(output_dir)
         feature_column = self.feature_columns[0]
         for x_idx in range(self.num_x_values):
-            csv_path = self._x_csv_path(output_dir, x_idx)
-            if self.config.resume and os.path.isfile(csv_path) and os.path.getsize(csv_path) > 0:
+            if x_idx in self._completed_x:
                 continue
             save_df = self.process_single_x_value(x_idx)
-            save_df.to_csv(csv_path, index=False)
+            append_x_results(output_dir, self.config.run_name, save_df)
             if self.config.plot:
                 x_val = float(self.x_row.iloc[x_idx][feature_column])
                 at_checkpoint = abs(x_val / 5.0 - round(x_val / 5.0)) < 1e-6
                 at_end = x_idx == self.num_x_values - 1
+                if self.config.dataset_name in TWO_D_PLOT_DATASETS and len(self.feature_columns) == 2:
+                    n_x2 = int(self.x_row[self.feature_columns[1]].nunique())
+                    at_checkpoint = at_checkpoint or (n_x2 > 0 and x_idx % n_x2 == n_x2 - 1)
                 if at_checkpoint or at_end:
                     try:
-                        plot_paths = save_toy_classification_plots(output_dir, self.config.run_name)
+                        plot_paths = self._save_plots(output_dir)
                     except Exception as exc:
                         print(f"Skipping plot refresh at x={x_val}: {exc}")
                     else:
@@ -647,12 +784,19 @@ class ToyClassificationExperiment:
         if self.config.plot:
             output_dir = f"results/toy_classification/{self.config.dataset_name}/{self.config.save_directory}"
             try:
-                plot_paths = save_toy_classification_plots(output_dir, self.config.run_name)
+                plot_paths = self._save_plots(output_dir)
             except ImportError as exc:
                 print(f"Skipping plot: {exc}. Install matplotlib and csaps to enable --plot.")
+            except Exception as exc:
+                print(f"Skipping plot: {exc}")
             else:
                 for path in plot_paths:
                     print(f"Saved plot: {path}")
+
+    def _save_plots(self, output_dir: str) -> list[str]:
+        if self.config.dataset_name in TWO_D_PLOT_DATASETS:
+            return save_2d_classification_plots(output_dir, self.config.run_name)
+        return save_toy_classification_plots(output_dir, self.config.run_name)
 
 def main(argv=None):
     parse_args(argv)

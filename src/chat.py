@@ -83,6 +83,14 @@ def _post_local_json(url: str, headers: dict, data: dict, max_retries: int = 3) 
     raise RuntimeError("Local model server request failed without a response.")
 
 def chat(message: str, label_keys, seed: int, temperature: float=1.0, model: str ="Qwen/Qwen2.5-14B", port: str = "8000", ip: str = "localhost", is_local_client: bool | int = True):
+    if is_local_client and model.startswith("mdlm:"):
+        from src.small_mdlm_backend import score_labels as mdlm_score_labels
+        return mdlm_score_labels(message, label_keys, temperature, model)
+
+    if is_local_client and model.startswith("tabpfn:"):
+        from src.tabpfn_backend import score_labels as tabpfn_score_labels
+        return tabpfn_score_labels(message, label_keys, temperature, model)
+
     if is_local_client and is_dream_model(model):
         return dream_score_labels(
             message,
@@ -168,6 +176,9 @@ def chat(message: str, label_keys, seed: int, temperature: float=1.0, model: str
     return text_output, normalized_probs
 
 def chat_response_only(message: str, seed: int, max_tokens: int=10, temperature: float=1.0, model: str="Qwen/Qwen2.5-14B", port: str="8000", ip: str="localhost", is_local_client: bool | int = True):
+    if is_local_client and model.startswith("mdlm:"):
+        from src.small_mdlm_backend import generate_text as mdlm_generate_text
+        return mdlm_generate_text(message, seed, temperature, model)
     if is_local_client and is_dream_model(model):
         return dream_generate_text(
             message,
@@ -262,7 +273,10 @@ def sample_joint_numbers(
     temperature: float = 1.0,
     model: str = "Qwen/Qwen2.5-14B",
 ) -> tuple[float, float, list[int]]:
-    """Sample (u, y) numbers jointly from two mask spans. Dream only. Returns u_ids."""
+    """Sample (u, y) numbers jointly from two mask spans. Returns u_ids."""
+    if model.startswith("mdlm:"):
+        from src.small_mdlm_backend import sample_joint_numbers as mdlm_joint_numbers
+        return mdlm_joint_numbers(icl, x_note, seed, temperature, model)
     if is_dream_model(model):
         return dream_sample_two_number_slots(
             icl,
@@ -368,6 +382,9 @@ def sample_joint_y_given_u(
 
 
 def infer_number_n_masks(labels, model: str) -> int:
+    if model.startswith("mdlm:"):
+        from src.small_mdlm_backend import infer_number_n_masks as mdlm_n_masks
+        return mdlm_n_masks(model)
     if is_dream_model(model):
         return dream_infer_number_n_masks(labels, model)
     raise RuntimeError(

@@ -1,0 +1,6 @@
+{
+  "model": {"hidden_size": 128, "n_blocks": 4, "n_heads": 4, "dropout": 0.0, "value_embedding": "row", "value_scale": 1.0},
+  "tokenizer": {"integer_digits": 2, "decimals": 2, "labels": 2},
+  "data": {"task": "classification_pfn", "input_size": 2, "bank_path": "data_banks/controlled_gp50_episode_pairs_1d_layout_3m/geometry", "bank_holdout": 20000, "context_min": 3, "context_max": 32, "max_queries": 2, "pfn_fixed_episodes": true},
+  "training": {"steps": 40000, "batch_size": 256, "lr": 0.0003, "seed": 0, "eval_every": 2000, "eval_tasks": 512, "sample_steps": 32, "precision": "fp32"}
+}

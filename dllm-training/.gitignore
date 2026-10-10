@@ -1,0 +1,6 @@
+outputs/
+*.pt
+*.pt.tmp
+data_banks/
+third_party/
+!history/checkpoints/*.pt

@@ -198,10 +198,12 @@ run_llm*.sh
 .smoke_dream_rep.py
 tests/
 
-# csv files
+# csv files (VUD results are kept: they are the record of every experiment)
 *.csv
+!results/**/*.csv
 
 slurm.sh
 
-results/
 tmp/
+
+*.zip

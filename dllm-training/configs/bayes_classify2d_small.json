@@ -1,0 +1,6 @@
+{
+  "model": {"hidden_size": 128, "n_blocks": 4, "n_heads": 4, "dropout": 0.0, "value_embedding": "row", "value_scale": 5.0},
+  "tokenizer": {"integer_digits": 3, "decimals": 2, "labels": 2},
+  "data": {"task": "classification_mix", "input_size": 2, "num_classes": 2, "context_min": 3, "context_max": 32, "max_queries": 2, "near_query_prob": 0.7, "scale_min": 1.0, "scale_max": 12.0, "one_d_prob": 0.3, "family_linear": 0.25, "family_rff": 0.35, "family_curves": 0.4},
+  "training": {"steps": 60000, "batch_size": 128, "lr": 0.0003, "seed": 0, "eval_every": 2000, "eval_tasks": 512, "sample_steps": 32, "precision": "fp32"}
+}
