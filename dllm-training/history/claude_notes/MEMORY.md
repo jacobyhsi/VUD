@@ -1,0 +1,7 @@
+- [dllm-training tmp location](dllm-training-tmp-location.md) — dllm-training scratch files go in dllm-training/tmp/, not root tmp/
+- [PFN prior is the foundation](pfn-prior-foundation.md) — build dllm-training data on the PFN paper's priors; extend, don't compare to hand-built ones
+- [Seed variation is small](seed-variation-small.md) — don't propose extra icl_sample_seed runs; seed 0 is representative
+- [Prior evidence check](prior-evidence-check.md) — screen priors with exact-Bayes/ideal-VUD before training; TabPFN prior fixed moons_1
+- [Chain follow-up steps](chain-follow-up-steps.md) — queue checks/eval/VUD in the launcher script so long jobs continue while the user is away
+- [Check GPU before launch](check-gpu-before-launch.md) — nvidia-smi before every launch; use the idle GPU, Dream often holds one
+- [Final classification checkpoint](final-classification-checkpoint.md) — adopted 2026-10-07: ControlledGP50 + geometry + 1-D + 75% layouts, 0.8M
