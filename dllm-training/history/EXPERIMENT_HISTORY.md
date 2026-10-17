@@ -226,9 +226,11 @@ The move to hx2 was verified first: VUD on LR with the final checkpoint reproduc
 | Setting 2: MDLM on TabPFN data | 0.20 / 0.24 | 0.05 / 0.15 | 0.70 |
 | Setting 3: TabPFN v1 | 0.29 / 0.23 | 0.07 / 0.38 | 0.75 |
 | Setting 4: GP + VUD | 0.10 / 0.40 | 0.01 / 0.11 | 0.86 |
-| Setting 4: GP exact decomposition (no VUD) | 0.22 / 0.14 | 0.14 / 0.48 | 0.86 |
+| Setting 4: GP exact decomposition, MC posterior (no VUD) | 0.29 / 0.16 | 0.12 / 0.44 | 0.80 |
+| Setting 4: GP exact decomposition, Laplace posterior | 0.22 / 0.14 | 0.14 / 0.48 | 0.86 |
 
 - **OOD behaviour depends on the model class.** On the same data, the GP reverts to p = 0.5 far away (TU → 1), while TabPFN and the MDLM extrapolate the trend.
+- **Exact decomposition:** `gp_exact_decomposition.py` (elliptical slice sampling of the GP posterior; MC error ≤ 0.014 bits). Per-x values are in `exact_decomposition.csv` next to the GP's VUD results, and shown dashed in the LR figure.
 - **VUD's variational gap is large on the GP.**
   - The GP's exact EU far is 0.48; VUD recovers 0.11.
   - At the prior far out: true AU 0.37; one auxiliary label under exact Bayes gives Va 0.63; under sklearn's Laplace, Va 0.81.
