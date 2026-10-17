@@ -64,15 +64,15 @@ parser.add_argument("--num_api_calls_save_value", default=0, type=int)
 parser.add_argument("--verbose_output", default=0, type=int)
 parser.add_argument("--plot", default=1, type=int, help="Save decomposition plots as results are written, and again at the end. Logistic regression writes the 1D curve. moons_1, moons_2, and spirals write the 2D heatmaps. Default 1.")
 parser.add_argument("--resume", default=0, type=int, help="Append each x to one results_{run_name}.csv. With resume 1, skip x values already in that file or in older per-x CSVs.")
-parser.add_argument("--va_method", default="vanilla", type=str, choices=("vanilla", "parallel_pf", "parallel_pp", "parallel", "parallel_hybrid"), help="Va estimator: vanilla (forward factorization), parallel_pf (joint-canvas samples scored by the forward conditional), parallel_pp (joint-count entropy), parallel (legacy PF alias), or parallel_hybrid (parallel u with conditional entropy of sequential y|u).")
-parser.add_argument("--num_joint_samples", default=None, type=int, help="Joint (u, y) samples for parallel Va. Default 100 for parallel_pp, otherwise 10.")
+parser.add_argument("--va_method", default="vanilla", type=str, choices=("vanilla", "backward", "parallel_pf", "parallel_pp", "parallel_pp_exact", "parallel"), help="Va estimator: vanilla (forward factorization), backward (backward factorization, Bayes-inverted), parallel_pf (joint-canvas samples scored by the forward conditional), parallel_pp (joint-count entropy), parallel_pp_exact (parallel_pp from the sampler's exact joint law; small MDLMs), or parallel (legacy PF alias).")
+parser.add_argument("--num_joint_samples", default=None, type=int, help="Joint (u, y) samples for parallel Va. Default 50 for parallel_pp, otherwise 10.")
 args = None
 
 
 DEFAULT_D_SIZE = 15
 DEFAULT_X_RANGE = "{'x1': [-12, 12, 0.2]}"
 DEFAULT_NUM_JOINT_SAMPLES = 10
-PP_NUM_JOINT_SAMPLES = 100
+PP_NUM_JOINT_SAMPLES = 50
 SPIRALS_D_SIZE = 200
 SPIRALS_X_RANGE = "{'x1': [-4, 4, 0.1], 'x2': [-4, 4, 0.1]}"
 MOONS_D_SIZE = 30

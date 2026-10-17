@@ -1,4 +1,4 @@
-"""Opt-in numeric MDLM adapter: toy-regression vanilla/parallel_pp and toy-classification vanilla.
+"""Opt-in numeric MDLM adapter: toy-regression vanilla/parallel_pp and toy-classification vanilla/parallel_pp/parallel_pp_exact.
 
 Use --model_name mdlm:/absolute/path/checkpoint.pt. Never dispatches ordinary
 Dream/QA/classification calls here. Load only trusted local checkpoints.
@@ -91,6 +91,57 @@ def score_labels(message, label_keys, temperature, model):
     probs = backend.label_probs(x, y, len(y) - 1, temperature)
     result = {key: float(probs[int(key)]) for key in label_keys}
     return max(result, key=result.get), result
+
+
+def sample_joint_labels(icls, x_note, label_keys, seed, temperature, model):
+    """Jointly sample (u, y) class labels for the auxiliary row and the query (parallel_pp).
+
+    icls is a list of contexts (e.g. one permutation per sample); returns one (u, y) per context,
+    sampled together in one batch."""
+    backend = load(model)
+    width = backend.config['data']['input_size']
+    xs, ys, targets = [], [], []
+    for icl in icls:
+        x, y, missing = rows(icl)
+        if len(missing) != 1:
+            raise ValueError('Joint sampling requires exactly one auxiliary placeholder')
+        x.append(features(x_note))
+        y.append(float('nan'))
+        if any(len(row) > width for row in x):
+            raise ValueError(f'Prompt has more features than the checkpoint ({width})')
+        targets.append([missing[0], len(y) - 1])
+        xs.append([row + [0.0] * (width - len(row)) for row in x])
+        ys.append(y)
+    samples = backend.sample_labels(xs, ys, targets, seed, temperature)
+    keys = {str(key) for key in label_keys}
+    if any(str(label) not in keys for pair in samples for label in pair):
+        raise ValueError(f'Sampled labels {samples} are outside {list(label_keys)}')
+    return [(str(u), str(prediction)) for u, prediction in samples]
+
+
+def joint_label_law(icls, x_note, label_keys, temperature, model):
+    """Exact parallel joint over (u, y) labels for each context (parallel_pp_exact).
+
+    Returns, per context, {'joint', 'u_first', 'y_first'}: each a dict {(u, y): probability}
+    keyed by label_keys, the law of the same sampler that sample_joint_labels draws from."""
+    backend = load(model)
+    width = backend.config['data']['input_size']
+    xs, ys, targets = [], [], []
+    for icl in icls:
+        x, y, missing = rows(icl)
+        if len(missing) != 1:
+            raise ValueError('Joint scoring requires exactly one auxiliary placeholder')
+        x.append(features(x_note))
+        y.append(float('nan'))
+        if any(len(row) > width for row in x):
+            raise ValueError(f'Prompt has more features than the checkpoint ({width})')
+        targets.append([missing[0], len(y) - 1])
+        xs.append([row + [0.0] * (width - len(row)) for row in x])
+        ys.append(y)
+    laws = backend.pair_label_law(xs, ys, targets, temperature)
+    as_dict = lambda m: {(u, y): float(m[int(u), int(y)]) for u in label_keys for y in label_keys}
+    return [{'joint': as_dict(law['joint']), 'u_first': as_dict(law['a_first']),
+             'y_first': as_dict(law['b_first'])} for law in laws]
 
 
 def sample_joint_numbers(icl, x_note, seed, temperature, model):

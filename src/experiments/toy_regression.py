@@ -78,12 +78,11 @@ parser.add_argument(
     "--va_method",
     default="vanilla",
     type=str,
-    choices=("vanilla", "parallel_pf", "parallel_pp", "parallel", "parallel_hybrid"),
+    choices=("vanilla", "parallel_pf", "parallel_pp", "parallel"),
     help=(
         "Va estimator: vanilla (forward factorization), parallel_pf (joint-canvas "
         "samples scored by the forward conditional Gaussian), parallel_pp (joint-Gaussian "
-        "conditional entropy with no forward scoring), parallel (legacy PF alias), or "
-        "parallel_hybrid (parallel u with conditional entropy of sequential y|u)."
+        "conditional entropy with no forward scoring), or parallel (legacy PF alias)."
     ),
 )
 parser.add_argument(

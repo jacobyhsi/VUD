@@ -501,27 +501,6 @@ def sample_two_label_slots(
 
 
 @torch.no_grad()
-def score_two_label_marginals(
-    icl: str,
-    x_note: str,
-    label_keys: Iterable,
-    temperature: float = 1.0,
-    model_name: str = "Dream-org/Dream-v0-Base-7B",
-) -> tuple[dict[str, float], dict[str, float]]:
-    """Both slots masked: softmax at u_pos and y_pos (one forward)."""
-    model, tokenizer = _load(model_name)
-    device = next(model.parameters()).device
-    mask_id = _mask_token_id(model, tokenizer)
-    x, u_pos, y_pos = _vanilla_aligned_canvas(
-        icl, x_note, tokenizer, mask_id, 1, 1, device, model_name
-    )
-    logits = _shifted_logits(model, x)
-    u_keys, u_probs = _label_probs_from_logits(logits[0, u_pos], tokenizer, label_keys, temperature)
-    y_keys, y_probs = _label_probs_from_logits(logits[0, y_pos], tokenizer, label_keys, temperature)
-    return _probs_dict(u_keys, u_probs), _probs_dict(y_keys, y_probs)
-
-
-@torch.no_grad()
 def score_two_label_joint(
     icl: str,
     x_note: str,

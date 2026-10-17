@@ -129,6 +129,16 @@ def answer_probs(model, tokenizer, ids, kinds, attention, values=None, temperatu
 
 
 @torch.no_grad()
+def canvas_probs(model, tokenizer, ids, kinds, attention, values=None, temperature=1.0):
+    """Proposal distribution at every answer token of a partly revealed canvas.
+
+    ids holds mask_id at still-hidden answer tokens and the revealed token elsewhere, exactly as
+    in `sample`, which draws its proposals from these probabilities."""
+    logits = _logits(model, tokenizer, ids, kinds, attention, values)
+    return (logits / temperature).softmax(-1)
+
+
+@torch.no_grad()
 def sample(model, tokenizer, ids, kinds, attention, seed=0, steps=32, temperature=1.0, values=None):
     if steps < 1 or not 0 < temperature < float('inf'):
         raise ValueError('Positive steps and finite positive temperature required')

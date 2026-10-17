@@ -10,7 +10,6 @@ from src.dream_backend import (
     sample_two_number_slots as dream_sample_two_number_slots,
     score_y_given_u_label as dream_score_y_given_u_label,
     score_two_label_joint as dream_score_two_label_joint,
-    score_two_label_marginals as dream_score_two_label_marginals,
     sample_y_given_u_ids as dream_sample_y_given_u_ids,
     infer_number_n_masks as dream_infer_number_n_masks,
     U_PLACEHOLDER,
@@ -90,6 +89,9 @@ def chat(message: str, label_keys, seed: int, temperature: float=1.0, model: str
     if is_local_client and model.startswith("tabpfn:"):
         from src.tabpfn_backend import score_labels as tabpfn_score_labels
         return tabpfn_score_labels(message, label_keys, temperature, model)
+    if is_local_client and model.startswith("gp:"):
+        from src.gp_backend import score_labels as gp_score_labels
+        return gp_score_labels(message, label_keys, temperature, model)
 
     if is_local_client and is_dream_model(model):
         return dream_score_labels(
@@ -249,7 +251,10 @@ def sample_joint_labels(
     model: str = "Qwen/Qwen2.5-14B",
     message: str | None = None,
 ):
-    """Sample (u, y) jointly from a two-mask canvas. Dream only. `icl` contains U_PLACEHOLDER."""
+    """Sample (u, y) jointly from a two-mask canvas (Dream or a small MDLM). `icl` contains U_PLACEHOLDER."""
+    if model.startswith("mdlm:"):
+        from src.small_mdlm_backend import sample_joint_labels as mdlm_joint_labels
+        return mdlm_joint_labels([icl], x_note, label_keys, seed, temperature, model)[0]
     if is_dream_model(model):
         return dream_sample_two_label_slots(
             icl,
@@ -263,6 +268,35 @@ def sample_joint_labels(
     raise RuntimeError(
         f"Joint two-slot sampling is only implemented for Dream, not {model}."
     )
+
+
+def sample_joint_labels_batch(
+    icls: list[str],
+    x_note: str,
+    label_keys,
+    seed: int,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+):
+    """Sample one (u, y) pair per context in a single batch. Small MDLM only."""
+    if model.startswith("mdlm:"):
+        from src.small_mdlm_backend import sample_joint_labels as mdlm_joint_labels
+        return mdlm_joint_labels(icls, x_note, label_keys, seed, temperature, model)
+    raise RuntimeError(f"Batched joint label sampling is only implemented for small MDLMs, not {model}.")
+
+
+def score_joint_label_law(
+    icls: list[str],
+    x_note: str,
+    label_keys,
+    temperature: float = 1.0,
+    model: str = "Qwen/Qwen2.5-14B",
+):
+    """Exact parallel joint over (u, y) for each context, without sampling. Small MDLM only."""
+    if model.startswith("mdlm:"):
+        from src.small_mdlm_backend import joint_label_law as mdlm_joint_label_law
+        return mdlm_joint_label_law(icls, x_note, label_keys, temperature, model)
+    raise RuntimeError(f"Exact joint label law is only implemented for small MDLMs, not {model}.")
 
 
 def sample_joint_numbers(
@@ -311,27 +345,6 @@ def score_joint_y_given_u(
         )
     raise RuntimeError(
         f"Canvas p(y|u) scoring is only implemented for Dream, not {model}."
-    )
-
-
-def score_joint_label_marginals(
-    icl: str,
-    x_note: str,
-    label_keys,
-    temperature: float = 1.0,
-    model: str = "Qwen/Qwen2.5-14B",
-) -> tuple[dict, dict]:
-    """Score p(u) and p(y) with both canvas slots masked. Dream only."""
-    if is_dream_model(model):
-        return dream_score_two_label_marginals(
-            icl,
-            x_note,
-            label_keys,
-            temperature=temperature,
-            model_name=model,
-        )
-    raise RuntimeError(
-        f"Canvas label marginals are only implemented for Dream, not {model}."
     )
 
 
