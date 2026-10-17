@@ -1,0 +1,22 @@
+{
+  "kernel": "ConstantKernel(amplitude) * RBF(lengthscale) on per-context z-scored inputs",
+  "amplitude": 21.98487114170109,
+  "lengthscale": 1.1612110471672483,
+  "bank": "data_banks/tabpfn_model_seeded_cls_3m",
+  "train_datasets": 2831529,
+  "batch": 1024,
+  "steps": 2766,
+  "validation_mean_log_marginal": -26.020152800548537,
+  "validation_grid_x1.25": {
+    "amplitude x0.80, lengthscale x0.80": -26.109090765271986,
+    "amplitude x0.80, lengthscale x1.00": -26.036425933703043,
+    "amplitude x0.80, lengthscale x1.25": -26.1733463852212,
+    "amplitude x1.00, lengthscale x0.80": -26.12346711717318,
+    "amplitude x1.00, lengthscale x1.00": -26.020152800548537,
+    "amplitude x1.00, lengthscale x1.25": -26.122398795896178,
+    "amplitude x1.25, lengthscale x0.80": -26.172221160980797,
+    "amplitude x1.25, lengthscale x1.00": -26.036229869246586,
+    "amplitude x1.25, lengthscale x1.25": -26.10210280244891
+  },
+  "fitted_is_grid_best": true
+}

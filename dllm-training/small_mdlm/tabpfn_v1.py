@@ -39,4 +39,16 @@ def setup(prior=False):
     for name in ('Optional', 'Tensor', 'Module', 'MultiheadAttention', 'Linear', 'Dropout', 'LayerNorm'):
         if not hasattr(transformer, name):
             setattr(transformer, name, getattr(typing, name, None) or getattr(torch.nn, name, None) or getattr(torch, name))
+    # TabPFNClassifier calls check_X_y / check_array with force_all_finite, which scikit-learn renamed to
+    # ensure_all_finite (1.6) and then removed; map the old keyword before TabPFN imports these functions.
+    import inspect
+    import sklearn.utils.validation as validation
+    for name in ('check_X_y', 'check_array'):
+        check = getattr(validation, name)
+        if 'force_all_finite' not in inspect.signature(check).parameters:
+            def renamed(*args, _check=check, force_all_finite=None, **kwargs):
+                if force_all_finite is not None:
+                    kwargs.setdefault('ensure_all_finite', force_all_finite)
+                return _check(*args, **kwargs)
+            setattr(validation, name, renamed)
     return repo
