@@ -1,7 +1,7 @@
 # Experiment history: small MDLMs for VUD
 
 Read this first when picking the project up again. It records everything tried so far, what worked and
-what didn't (with numbers), the decisions taken, and where the evidence lives. Last updated 2026-10-10.
+what didn't (with numbers), the decisions taken, and where the evidence lives. Last updated 2026-10-17.
 
 Companion material in this folder:
 - `claude_notes/`: working rules and lessons kept by the coding assistant.
@@ -188,7 +188,55 @@ Config files are in `configs/`; results names are in `results/toy_*/<dataset>/<n
 ### 4e. Qwen2.5-14B baselines (original repo setup)
 **Setup:** vLLM with FlashInfer, VUD vanilla on LR, moons_1, moons_2, linear_regression and gaps (spirals excluded). All complete; results under `results/toy_*/<dataset>/Qwen2.5-14B/`.
 
-## 5. What didn't work (quick reference)
+## 5. Path dependence and a GP baseline (2026-10-11 to 10-17, hx2 cluster)
+
+All on the final classification checkpoint unless stated; bits, near / far from the data, scored as in section 1.
+The move to hx2 was verified first: VUD on LR with the final checkpoint reproduced the stored results bit for bit.
+
+### 5a. Forward, backward and parallel factorizations (`--va_method vanilla | backward | parallel_pp | parallel_pp_exact`)
+- **New methods:**
+  - `backward`: pB = p(y|x,D) p(u|z,y,x,D), with p(y|u) by Bayes' rule and the KL filter on the u-marginal.
+  - `parallel_pp` for the MDLM: joint (u, y) samples from the MDLM's own random-order sampler, batched; default n is now 50.
+  - `parallel_pp_exact`: the sampler's exact joint from 5 forward passes, a mixture of the u-first, y-first and same-step paths, with no Monte Carlo error.
+  - `parallel_hybrid` was deleted (never run).
+- **Exactness check:** the exact joint matches 20,000 sampler draws within 2 SE.
+
+| | LR AU err | LR EU | moons_1 AU err | moons_1 EU |
+|---|---|---|---|---|
+| Forward (vanilla) | 0.16 / 0.22 | 0.03 / 0.25 | 0.21 / 0.23 | 0.08 / 0.49 |
+| Backward | 0.16 / 0.22 | 0.04 / 0.27 | 0.20 / 0.22 | 0.10 / 0.50 |
+| Parallel, exact | 0.15 / 0.19 | 0.03 / 0.27 | 0.26 / 0.34 | 0.03 / 0.38 |
+| Parallel, sampled n = 50 | 0.24 / 0.13 | 0.12 / 0.45 | 0.19 / 0.20 | 0.11 / 0.53 |
+
+- **Forward ≈ backward.** Mean total variation between the joints is 0.020 on LR and 0.032 on moons_1. **Parallel is the outlier** (0.04 / 0.07).
+- **Sampled PP is biased.** At finite n its plug-in conditional entropy is biased low, and the min over z amplifies the noise, so EU is inflated (it grows as n falls). Exact gives the true parallel value.
+- **Timing** (each run alone on one H200, LR / moons_1): vanilla 288 / 876 s; PP n = 50: 440 / 1944 s; exact: 68 / 243 s.
+- **Untested hypothesis for why parallel deviates:** u enters as a revealed token on a still-hidden row, not as an observed demonstration.
+
+### 5b. Setting 4: GP classifier trained on setting 2's TabPFN-generated data
+- **Data:** the setting-2 bank was regenerated on hx2.
+  - The count is 2,851,529, not the original 2,852,538.
+  - Generation is deterministic on hx2 and does not depend on numpy/scipy versions, so the difference is hardware-level.
+- **Model:** sklearn `GaussianProcessClassifier`, kernel ConstantKernel × RBF on per-context z-scored x, Laplace inference.
+  - Hyperparameters were fitted by maximising the summed Laplace marginal likelihood over the 2.83M training datasets (`fit_gp_classifier.py`).
+  - Result: amplitude 22.0, lengthscale 1.16 (`checkpoints/gp_tabpfn_model_seeded_fit.json`). VUD backend: `--model_name gp:<fit.json>`.
+
+| LR | AU err | EU | TU far |
+|---|---|---|---|
+| Setting 2: MDLM on TabPFN data | 0.20 / 0.24 | 0.05 / 0.15 | 0.70 |
+| Setting 3: TabPFN v1 | 0.29 / 0.23 | 0.07 / 0.38 | 0.75 |
+| Setting 4: GP + VUD | 0.10 / 0.40 | 0.01 / 0.11 | 0.86 |
+| Setting 4: GP exact decomposition (no VUD) | 0.22 / 0.14 | 0.14 / 0.48 | 0.86 |
+
+- **OOD behaviour depends on the model class.** On the same data, the GP reverts to p = 0.5 far away (TU → 1), while TabPFN and the MDLM extrapolate the trend.
+- **VUD's variational gap is large on the GP.**
+  - The GP's exact EU far is 0.48; VUD recovers 0.11.
+  - At the prior far out: true AU 0.37; one auxiliary label under exact Bayes gives Va 0.63; under sklearn's Laplace, Va 0.81.
+- **Response to the auxiliary point far away:** TabPFN 0.72, GP with exact inference ≈ 0.68, GP with Laplace 0.50, MDLM 0.56. So the MDLM's weak response looks like genuine model error.
+- **moons_1:** the single-lengthscale RBF GP is too smooth (exact AU err 0.43 near).
+- **Figures:** `results/toy_classification/{logistic_regression,moons_1}/settings_comparison_*_with_gp.png`.
+
+## 6. What didn't work (quick reference)
 
 | Attempt | Why it failed |
 |---|---|
@@ -205,7 +253,7 @@ Config files are in `configs/`; results names are in `results/toy_*/<dataset>/<n
 | Unseeded TabPFN-model label sampling | Collapse to single-class datasets |
 | Chasing LR far-field exact EU | The target is unstable |
 
-## 6. Operational lessons (cluster and tooling)
+## 7. Operational lessons (cluster and tooling)
 
 **Running jobs:**
 - Use a screen session; `srun --jobid=<job> --overlap ...`; kill the screen when done.
@@ -222,6 +270,11 @@ Config files are in `configs/`; results names are in `results/toy_*/<dataset>/<n
 - Under SLURM with several GPUs, TabPFN's `train()` tries to start distributed training. Unset `SLURM_PROCID` / `LOCAL_RANK` and hide the GPUs for prior sampling.
 - Its prior split needs `max_eval_pos` < the sequence length, or every dataset fails the class-compatibility check.
 - Its code imports names from `torch.nn.modules.transformer` that current PyTorch dropped. Use the shim in `small_mdlm/tabpfn_v1.py`.
+
+**hx2 cluster:**
+- `AGENTS.md` has the job workflow. If SLURM commands fail with `DNS SRV lookup failed`, the login node lost its config after a reboot: use another login node.
+- Interactive CPU jobs must use the `interactive` partition. The interactive QoS allows only 1 GPU per user.
+- scikit-learn ≥ 1.8 removed `force_all_finite`, which TabPFN v1 uses; `small_mdlm/tabpfn_v1.py` maps it.
 
 **Other:**
 - Seed variation is small: don't spend runs on extra `icl_sample_seed` values.

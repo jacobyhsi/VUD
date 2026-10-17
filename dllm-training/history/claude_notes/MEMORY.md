@@ -5,3 +5,4 @@
 - [Chain follow-up steps](chain-follow-up-steps.md) — queue checks/eval/VUD in the launcher script so long jobs continue while the user is away
 - [Check GPU before launch](check-gpu-before-launch.md) — nvidia-smi before every launch; use the idle GPU, Dream often holds one
 - [Final classification checkpoint](final-classification-checkpoint.md) — adopted 2026-10-07: ControlledGP50 + geometry + 1-D + 75% layouts, 0.8M
+- [hx2 cluster setup](hx2-cluster-setup.md) — since 2026-10-11: salloc interactive-gpu (1 GPU/64G/8h) for short work, sbatch gpu for long; uv (~/.local/bin) .venv
